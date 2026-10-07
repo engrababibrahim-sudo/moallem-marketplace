@@ -1,4 +1,3 @@
-
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
@@ -11,11 +10,15 @@ import {
   publicProcedure,
   router,
 } from "./_core/trpc";
-import { canCreateParentChildLink, isAdmin } from "./authorization";
 import {
-  parentProfiles,
-  users,
-} from "../drizzle/schema";
+  canCreateParentChildLink,
+  isAdmin,
+} from "./authorization";
+
+import {
+  parentProcedure as _parentProcedure,
+} from "./_core/trpc";
+
 import {
   createParentStudentLink,
   countSuperAdmins,
@@ -35,6 +38,7 @@ import {
   provisionStudentUser,
   updateUserAccessWithAudit,
 } from "./db";
+
 import {
   createTeacherApplication,
   getTeacherApplication,
@@ -44,7 +48,9 @@ import {
   submitTeacherApplication,
   updateTeacherApplication,
 } from "./teacher-db";
+
 import { listPublicMarketplaceTeachers } from "./marketplace";
+
 import {
   cancelStudentBooking,
   createAvailability,
@@ -59,18 +65,36 @@ import {
   updateTeacherBookingStatus,
 } from "./booking";
 
+/* =========================================================
+   STUDENT PROFILE
+========================================================= */
+
 const studentProfileInput = z.object({
   fullName: z.string().max(255).optional().nullable(),
   educationStage: z.string().max(100).optional().nullable(),
   grade: z.string().max(100).optional().nullable(),
-  preferredSubjects: z.array(z.string().max(100)).max(30).optional(),
+  preferredSubjects: z
+    .array(z.string().max(100))
+    .max(30)
+    .optional(),
   learningLevel: z.string().max(100).optional().nullable(),
   learningGoals: z.string().max(5000).optional().nullable(),
   strengths: z.string().max(5000).optional().nullable(),
   difficulties: z.string().max(5000).optional().nullable(),
-  preferredLearningFormat: z.string().max(100).optional().nullable(),
-  preferredAvailability: z.array(z.string().max(100)).max(30).optional(),
+  preferredLearningFormat: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+  preferredAvailability: z
+    .array(z.string().max(100))
+    .max(30)
+    .optional(),
 });
+
+/* =========================================================
+   LEARNING PROFILE
+========================================================= */
 
 const learningProfileInput = z.object({
   role: z.string().max(100).optional().nullable(),
@@ -84,26 +108,106 @@ const learningProfileInput = z.object({
   format: z.string().max(150).optional().nullable(),
   availability: z.string().max(150).optional().nullable(),
   time: z.string().max(150).optional().nullable(),
-  answers: z.record(z.string(), z.string()).optional(),
+  answers: z
+    .record(z.string(), z.string())
+    .optional(),
 });
+
+/* =========================================================
+   TEACHER APPLICATION
+========================================================= */
 
 const teacherApplicationInput = z.object({
   fullName: z.string().trim().min(2).max(255),
-  phone: z.string().max(50).optional().nullable(),
-  country: z.string().max(100).optional().nullable(),
-  city: z.string().max(100).optional().nullable(),
-  profilePhotoUrl: z.string().url().max(500).optional().nullable(),
-  bio: z.string().max(5000).optional().nullable(),
-  qualification: z.string().max(255).optional().nullable(),
-  specialization: z.string().max(255).optional().nullable(),
-  yearsOfExperience: z.number().int().min(0).max(80).optional(),
-  subjects: z.array(z.string().max(100)).max(50).optional(),
-  educationStages: z.array(z.string().max(100)).max(30).optional(),
-  grades: z.array(z.string().max(100)).max(50).optional(),
-  teachingFormat: z.string().max(100).optional().nullable(),
-  hourlyRate: z.number().int().min(0).max(100000).optional().nullable(),
-  availability: z.array(z.string().max(150)).max(100).optional(),
+
+  phone: z
+    .string()
+    .max(50)
+    .optional()
+    .nullable(),
+
+  country: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  city: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  profilePhotoUrl: z
+    .string()
+    .url()
+    .max(500)
+    .optional()
+    .nullable(),
+
+  bio: z
+    .string()
+    .max(5000)
+    .optional()
+    .nullable(),
+
+  qualification: z
+    .string()
+    .max(255)
+    .optional()
+    .nullable(),
+
+  specialization: z
+    .string()
+    .max(255)
+    .optional()
+    .nullable(),
+
+  yearsOfExperience: z
+    .number()
+    .int()
+    .min(0)
+    .max(80)
+    .optional(),
+
+  subjects: z
+    .array(z.string().max(100))
+    .max(50)
+    .optional(),
+
+  educationStages: z
+    .array(z.string().max(100))
+    .max(30)
+    .optional(),
+
+  grades: z
+    .array(z.string().max(100))
+    .max(50)
+    .optional(),
+
+  teachingFormat: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  hourlyRate: z
+    .number()
+    .int()
+    .min(0)
+    .max(100000)
+    .optional()
+    .nullable(),
+
+  availability: z
+    .array(z.string().max(150))
+    .max(100)
+    .optional(),
 });
+
+/* =========================================================
+   AUTHORIZATION HELPERS
+========================================================= */
 
 function assertSelfOrAdmin(
   actor: { id: number; role: string },
@@ -121,93 +225,188 @@ function assertSelfOrAdmin(
   }
 }
 
+/* =========================================================
+   AVAILABILITY
+========================================================= */
+
 const availabilityInput = z.object({
-  dayOfWeek: z.number().int().min(0).max(6).nullable().optional(),
+  dayOfWeek: z
+    .number()
+    .int()
+    .min(0)
+    .max(6)
+    .nullable()
+    .optional(),
+
   specificDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional(),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
-  timezone: z.string().min(1).max(64).default("UTC"),
+
+  startTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/),
+
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/),
+
+  timezone: z
+    .string()
+    .min(1)
+    .max(64)
+    .default("UTC"),
 });
 
-const createBookingInput = z.object({
-  teacherId: z.number().int().positive(),
-  startAt: z.string().datetime(),
-  endAt: z.string().datetime(),
-  timezone: z.string().min(1).max(64).default("UTC"),
-  notes: z.string().max(5000).optional().nullable(),
-  subject: z.string().trim().max(150).optional().nullable(),
-  currency: z
+/* =========================================================
+   BOOKING INPUT
+========================================================= */
+
+/*
+ * السعر لا يأتي من الواجهة.
+ *
+ * الواجهة ترسل:
+ * teacherId
+ * subject
+ * startAt
+ * endAt
+ * timezone
+ * notes
+ *
+ * والسيرفر هو الذي يحسب:
+ * durationMinutes
+ * hourlyRateSnapshot
+ * totalPrice
+ * currency
+ */
+
+const bookingCreateInput = z.object({
+  teacherId: z
+    .number()
+    .int()
+    .positive(),
+
+  subject: z
     .string()
     .trim()
-    .regex(/^[A-Za-z]{3}$/)
-    .transform((value) => value.toUpperCase())
-    .optional(),
+    .min(1, "يجب تحديد المادة")
+    .max(150),
+
+  startAt: z
+    .string()
+    .datetime(),
+
+  endAt: z
+    .string()
+    .datetime(),
+
+  timezone: z
+    .string()
+    .min(1)
+    .max(64)
+    .default("UTC"),
+
+  notes: z
+    .string()
+    .max(5000)
+    .optional()
+    .nullable(),
 });
 
-const cancellationInput = z.object({
-  id: z.number().int().positive(),
-  cancellationReason: z.string().trim().max(2000).optional().nullable(),
-});
-
-const teacherBookingStatusInput = z.object({
-  id: z.number().int().positive(),
-  status: z.enum([
-    "confirmed",
-    "rejected",
-    "completed",
-    "cancelled",
-  ]),
-  cancellationReason: z.string().trim().max(2000).optional().nullable(),
-});
+/* =========================================================
+   APP ROUTER
+========================================================= */
 
 export const appRouter = router({
+  /* =======================================================
+     SYSTEM
+  ======================================================= */
+
   system: systemRouter,
 
+  /* =======================================================
+     AUTH
+  ======================================================= */
+
   auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
+    me: publicProcedure.query(
+      (opts) => opts.ctx.user,
+    ),
 
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
+    logout: publicProcedure.mutation(
+      ({ ctx }) => {
+        const cookieOptions =
+          getSessionCookieOptions(ctx.req);
 
-      ctx.res.clearCookie(COOKIE_NAME, {
-        ...cookieOptions,
-        maxAge: -1,
-      });
+        ctx.res.clearCookie(
+          COOKIE_NAME,
+          {
+            ...cookieOptions,
+            maxAge: -1,
+          },
+        );
 
-      return { success: true } as const;
-    }),
+        return {
+          success: true,
+        } as const;
+      },
+    ),
   }),
 
-  student: router({
-    favorites: router({
-      list: protectedProcedure.query(async ({ ctx }) => {
-        if (ctx.user.role !== "student") {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "المفضلة متاحة للطلاب فقط",
-          });
-        }
+  /* =======================================================
+     STUDENT
+  ======================================================= */
 
-        return listStudentFavorites(ctx.user.id);
-      }),
+  student: router({
+    /* =====================================================
+       FAVORITES
+    ===================================================== */
+
+    favorites: router({
+      list: protectedProcedure.query(
+        async ({ ctx }) => {
+          if (ctx.user.role !== "student") {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message:
+                "المفضلة متاحة للطلاب فقط",
+            });
+          }
+
+          return listStudentFavorites(
+            ctx.user.id,
+          );
+        },
+      ),
 
       add: protectedProcedure
         .input(
           z.object({
-            favoriteType: z.enum(["teacher", "course"]),
-            targetId: z.string().trim().min(1).max(128),
-            title: z.string().trim().min(1).max(255),
+            favoriteType: z.enum([
+              "teacher",
+              "course",
+            ]),
+
+            targetId: z
+              .string()
+              .trim()
+              .min(1)
+              .max(128),
+
+            title: z
+              .string()
+              .trim()
+              .min(1)
+              .max(255),
           }),
         )
         .mutation(async ({ ctx, input }) => {
           if (ctx.user.role !== "student") {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "المفضلة متاحة للطلاب فقط",
+              message:
+                "المفضلة متاحة للطلاب فقط",
             });
           }
 
@@ -222,15 +421,24 @@ export const appRouter = router({
       remove: protectedProcedure
         .input(
           z.object({
-            favoriteType: z.enum(["teacher", "course"]),
-            targetId: z.string().trim().min(1).max(128),
+            favoriteType: z.enum([
+              "teacher",
+              "course",
+            ]),
+
+            targetId: z
+              .string()
+              .trim()
+              .min(1)
+              .max(128),
           }),
         )
         .mutation(async ({ ctx, input }) => {
           if (ctx.user.role !== "student") {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "المفضلة متاحة للطلاب فقط",
+              message:
+                "المفضلة متاحة للطلاب فقط",
             });
           }
 
@@ -240,203 +448,330 @@ export const appRouter = router({
             input.targetId,
           );
 
-          return { success: true } as const;
+          return {
+            success: true,
+          } as const;
         }),
     }),
+
+    /* =====================================================
+       PROFILE
+    ===================================================== */
 
     profile: router({
       get: protectedProcedure
         .input(
           z
             .object({
-              userId: z.number().int().positive().optional(),
+              userId: z
+                .number()
+                .int()
+                .positive()
+                .optional(),
             })
             .optional(),
         )
         .query(({ ctx, input }) => {
-          const userId = input?.userId ?? ctx.user.id;
+          const userId =
+            input?.userId ?? ctx.user.id;
 
-          assertSelfOrAdmin(ctx.user, userId);
+          assertSelfOrAdmin(
+            ctx.user,
+            userId,
+          );
 
-          return getStudentProfile(userId);
+          return getStudentProfile(
+            userId,
+          );
         }),
 
-      exportData: protectedProcedure.query(async ({ ctx }) => {
-        if (ctx.user.role !== "student") {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "تصدير الملف متاح للطلاب فقط",
-          });
-        }
+      exportData: protectedProcedure.query(
+        async ({ ctx }) => {
+          if (ctx.user.role !== "student") {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message:
+                "تصدير الملف متاح للطلاب فقط",
+            });
+          }
 
-        const [user, profile, learning, bookings] =
-          await Promise.all([
+          const [
+            user,
+            profile,
+            learning,
+            bookings,
+          ] = await Promise.all([
             getUserById(ctx.user.id),
             getStudentProfile(ctx.user.id),
             getLearningProfile(ctx.user.id),
             listStudentBookings(ctx.user.id),
           ]);
 
-        return {
-          user,
-          profile,
-          learning,
-          bookings,
-        };
-      }),
+          return {
+            user,
+            profile,
+            learning,
+            bookings,
+          };
+        },
+      ),
 
       update: protectedProcedure
         .input(
           studentProfileInput.extend({
-            userId: z.number().int().positive().optional(),
+            userId: z
+              .number()
+              .int()
+              .positive()
+              .optional(),
           }),
         )
         .mutation(async ({ ctx, input }) => {
-          const { userId = ctx.user.id, ...data } = input;
+          const {
+            userId = ctx.user.id,
+            ...data
+          } = input;
 
-          assertSelfOrAdmin(ctx.user, userId);
-
-          const profile = await upsertStudentProfile(
+          assertSelfOrAdmin(
+            ctx.user,
             userId,
-            data,
           );
+
+          const profile =
+            await upsertStudentProfile(
+              userId,
+              data,
+            );
 
           if (
             userId === ctx.user.id &&
             ctx.user.role === "user"
           ) {
-            await provisionStudentUser(ctx.user.id);
+            await provisionStudentUser(
+              ctx.user.id,
+            );
           }
 
           return profile;
         }),
     }),
 
+    /* =====================================================
+       LEARNING PROFILE
+    ===================================================== */
+
     learningProfile: router({
       get: protectedProcedure
         .input(
           z
             .object({
-              studentUserId: z.number().int().positive().optional(),
+              studentUserId: z
+                .number()
+                .int()
+                .positive()
+                .optional(),
             })
             .optional(),
         )
         .query(async ({ ctx, input }) => {
           const studentUserId =
-            input?.studentUserId ?? ctx.user.id;
+            input?.studentUserId ??
+            ctx.user.id;
 
           if (
             studentUserId !== ctx.user.id &&
             !isAdmin(ctx.user.role)
           ) {
-            const child = await getActiveChild(
-              ctx.user.id,
-              studentUserId,
-            );
+            const child =
+              await getActiveChild(
+                ctx.user.id,
+                studentUserId,
+              );
 
             if (!child) {
               throw new TRPCError({
                 code: "FORBIDDEN",
-                message: "هذا الطالب غير مرتبط بحسابك",
+                message:
+                  "هذا الطالب غير مرتبط بحسابك",
               });
             }
           }
 
-          return getLearningProfile(studentUserId);
+          return getLearningProfile(
+            studentUserId,
+          );
         }),
 
       save: protectedProcedure
         .input(
           learningProfileInput.extend({
-            studentUserId: z.number().int().positive().optional(),
+            studentUserId: z
+              .number()
+              .int()
+              .positive()
+              .optional(),
           }),
         )
-        .mutation(({ ctx, input }) => {
-          const {
-            studentUserId = ctx.user.id,
-            ...data
-          } = input;
+        .mutation(
+          ({ ctx, input }) => {
+            const {
+              studentUserId = ctx.user.id,
+              ...data
+            } = input;
 
-          assertSelfOrAdmin(ctx.user, studentUserId);
+            assertSelfOrAdmin(
+              ctx.user,
+              studentUserId,
+            );
 
-          return upsertLearningProfile(
-            studentUserId,
-            data,
-          );
-        }),
+            return upsertLearningProfile(
+              studentUserId,
+              data,
+            );
+          },
+        ),
     }),
+
+    /* =====================================================
+       STUDENT BOOKINGS
+    ===================================================== */
 
     booking: router({
       create: protectedProcedure
-        .input(createBookingInput)
+        .input(bookingCreateInput)
         .mutation(async ({ ctx, input }) => {
           if (
             ctx.user.role !== "student" ||
-            ctx.user.accountStatus !== "active"
+            ctx.user.accountStatus !==
+              "active"
           ) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "هذا الإجراء متاح للطالب النشط فقط",
+              message:
+                "هذا الإجراء متاح للطالب النشط فقط",
             });
           }
 
-          return createBooking(ctx.user.id, {
-            teacherId: input.teacherId,
-            startAt: new Date(input.startAt),
-            endAt: new Date(input.endAt),
-            timezone: input.timezone,
-            notes: input.notes ?? null,
-            subject: input.subject ?? null,
-            currency: input.currency ?? "EGP",
-          });
+          const startAt =
+            new Date(input.startAt);
+
+          const endAt =
+            new Date(input.endAt);
+
+          if (
+            !Number.isFinite(
+              startAt.getTime(),
+            ) ||
+            !Number.isFinite(
+              endAt.getTime(),
+            ) ||
+            startAt >= endAt
+          ) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "وقت بداية ونهاية الحجز غير صالح",
+            });
+          }
+
+          return createBooking(
+            ctx.user.id,
+            {
+              teacherId:
+                input.teacherId,
+
+              subject:
+                input.subject,
+
+              startAt,
+
+              endAt,
+
+              timezone:
+                input.timezone,
+
+              notes:
+                input.notes ?? null,
+            },
+          );
         }),
 
-      list: protectedProcedure.query(async ({ ctx }) => {
-        if (
-          ctx.user.role !== "student" ||
-          ctx.user.accountStatus !== "active"
-        ) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "هذا الإجراء متاح للطالب النشط فقط",
-          });
-        }
-
-        return listStudentBookings(ctx.user.id);
-      }),
-
-      cancel: protectedProcedure
-        .input(cancellationInput)
-        .mutation(async ({ ctx, input }) => {
+      list: protectedProcedure.query(
+        async ({ ctx }) => {
           if (
             ctx.user.role !== "student" ||
-            ctx.user.accountStatus !== "active"
+            ctx.user.accountStatus !==
+              "active"
           ) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "هذا الإجراء متاح للطالب النشط فقط",
+              message:
+                "هذا الإجراء متاح للطالب النشط فقط",
+            });
+          }
+
+          return listStudentBookings(
+            ctx.user.id,
+          );
+        },
+      ),
+
+      cancel: protectedProcedure
+        .input(
+          z.object({
+            id: z
+              .number()
+              .int()
+              .positive(),
+
+            reason: z
+              .string()
+              .trim()
+              .max(2000)
+              .optional()
+              .nullable(),
+          }),
+        )
+        .mutation(async ({ ctx, input }) => {
+          if (
+            ctx.user.role !== "student" ||
+            ctx.user.accountStatus !==
+              "active"
+          ) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message:
+                "هذا الإجراء متاح للطالب النشط فقط",
             });
           }
 
           return cancelStudentBooking(
             ctx.user.id,
             input.id,
-            input.cancellationReason ?? null,
+            input.reason ?? null,
           );
         }),
     }),
   }),
 
+  /* =======================================================
+     PARENT
+  ======================================================= */
+
   parent: router({
     children: router({
-      list: protectedProcedure.query(({ ctx }) =>
-        listActiveChildren(ctx.user.id),
+      list: protectedProcedure.query(
+        ({ ctx }) =>
+          listActiveChildren(ctx.user.id),
       ),
 
       get: protectedProcedure
         .input(
           z.object({
-            studentUserId: z.number().int().positive(),
+            studentUserId: z
+              .number()
+              .int()
+              .positive(),
           }),
         )
         .query(async ({ ctx, input }) => {
@@ -446,15 +781,17 @@ export const appRouter = router({
             );
           }
 
-          const child = await getActiveChild(
-            ctx.user.id,
-            input.studentUserId,
-          );
+          const child =
+            await getActiveChild(
+              ctx.user.id,
+              input.studentUserId,
+            );
 
           if (!child) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "هذا الطالب غير مرتبط بحسابك",
+              message:
+                "هذا الطالب غير مرتبط بحسابك",
             });
           }
 
@@ -464,211 +801,280 @@ export const appRouter = router({
       link: parentProcedure
         .input(
           z.object({
-            studentUserId: z.number().int().positive(),
+            studentUserId: z
+              .number()
+              .int()
+              .positive(),
+
             relationshipType: z
               .string()
               .max(50)
               .default("parent"),
           }),
         )
-        .mutation(async ({ ctx, input }) => {
-          const parentProfile =
-            await getParentProfile(ctx.user.id);
+        .mutation(
+          async ({ ctx, input }) => {
+            const parentProfile =
+              await getParentProfile(
+                ctx.user.id,
+              );
 
-          if (
-            !canCreateParentChildLink(
-              ctx.user,
-              Boolean(parentProfile),
-            )
-          ) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "هذا الإجراء متاح لولي الأمر فقط",
-            });
-          }
+            if (
+              !canCreateParentChildLink(
+                ctx.user,
+                Boolean(parentProfile),
+              )
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "هذا الإجراء متاح لولي الأمر فقط",
+              });
+            }
 
-          if (ctx.user.id === input.studentUserId) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "لا يمكن ربط الحساب بنفسه",
-            });
-          }
+            if (
+              ctx.user.id ===
+              input.studentUserId
+            ) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                  "لا يمكن ربط الحساب بنفسه",
+              });
+            }
 
-          const studentProfile =
-            await getStudentProfile(
+            const studentProfile =
+              await getStudentProfile(
+                input.studentUserId,
+              );
+
+            if (!studentProfile) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "ملف الطالب غير موجود",
+              });
+            }
+
+            return createParentStudentLink(
+              ctx.user.id,
               input.studentUserId,
+              input.relationshipType,
             );
-
-          if (!studentProfile) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "ملف الطالب غير موجود",
-            });
-          }
-
-          return createParentStudentLink(
-            ctx.user.id,
-            input.studentUserId,
-            input.relationshipType,
-          );
-        }),
+          },
+        ),
     }),
   }),
 
+  /* =======================================================
+     TEACHER
+  ======================================================= */
+
   teacher: router({
+    /* =====================================================
+       APPLICATION
+    ===================================================== */
+
     application: router({
-      get: protectedProcedure.query(({ ctx }) =>
-        getTeacherApplication(ctx.user.id),
+      get: protectedProcedure.query(
+        ({ ctx }) =>
+          getTeacherApplication(
+            ctx.user.id,
+          ),
       ),
 
       create: protectedProcedure
         .input(teacherApplicationInput)
-        .mutation(async ({ ctx, input }) => {
-          if (await getTeacherApplication(ctx.user.id)) {
-            throw new TRPCError({
-              code: "CONFLICT",
-              message: "يوجد طلب معلم لهذا الحساب بالفعل",
-            });
-          }
+        .mutation(
+          async ({ ctx, input }) => {
+            if (
+              await getTeacherApplication(
+                ctx.user.id,
+              )
+            ) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message:
+                  "يوجد طلب معلم لهذا الحساب بالفعل",
+              });
+            }
 
-          return createTeacherApplication(
-            ctx.user.id,
-            input,
-          );
-        }),
+            return createTeacherApplication(
+              ctx.user.id,
+              input,
+            );
+          },
+        ),
 
       update: protectedProcedure
-        .input(teacherApplicationInput.partial())
-        .mutation(async ({ ctx, input }) => {
+        .input(
+          teacherApplicationInput.partial(),
+        )
+        .mutation(
+          async ({ ctx, input }) => {
+            const existing =
+              await getTeacherApplication(
+                ctx.user.id,
+              );
+
+            if (!existing) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "أنشئ طلب المعلم أولًا",
+              });
+            }
+
+            if (
+              existing.verificationStatus ===
+              "suspended"
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "لا يمكن تعديل طلب معلق",
+              });
+            }
+
+            return updateTeacherApplication(
+              ctx.user.id,
+              input,
+            );
+          },
+        ),
+
+      submit: protectedProcedure.mutation(
+        async ({ ctx }) => {
           const existing =
-            await getTeacherApplication(ctx.user.id);
+            await getTeacherApplication(
+              ctx.user.id,
+            );
 
           if (!existing) {
             throw new TRPCError({
               code: "NOT_FOUND",
-              message: "أنشئ طلب المعلم أولًا",
+              message:
+                "أنشئ طلب المعلم أولًا",
             });
           }
 
           if (
-            existing.verificationStatus === "suspended"
+            !existing.fullName ||
+            !existing.qualification ||
+            !existing.specialization ||
+            !existing.subjects.length ||
+            !existing.educationStages.length ||
+            !existing.grades.length
           ) {
             throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "لا يمكن تعديل طلب معلق",
+              code: "BAD_REQUEST",
+              message:
+                "أكمل البيانات المهنية والمواد والصفوف قبل الإرسال",
             });
           }
 
-          return updateTeacherApplication(
+          return submitTeacherApplication(
             ctx.user.id,
-            input,
+            ctx.user.id,
           );
-        }),
-
-      submit: protectedProcedure.mutation(async ({ ctx }) => {
-        const existing =
-          await getTeacherApplication(ctx.user.id);
-
-        if (!existing) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "أنشئ طلب المعلم أولًا",
-          });
-        }
-
-        if (
-          !existing.fullName ||
-          !existing.qualification ||
-          !existing.specialization ||
-          !existing.subjects.length ||
-          !existing.educationStages.length ||
-          !existing.grades.length
-        ) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "أكمل البيانات المهنية والمواد والصفوف قبل الإرسال",
-          });
-        }
-
-        return submitTeacherApplication(
-          ctx.user.id,
-          ctx.user.id,
-        );
-      }),
+        },
+      ),
     }),
 
+    /* =====================================================
+       AVAILABILITY
+    ===================================================== */
+
     availability: router({
-      list: protectedProcedure.query(async ({ ctx }) => {
-        if (
-          ctx.user.role !== "teacher" ||
-          ctx.user.accountStatus !== "active"
-        ) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "هذا الإجراء متاح للمعلم النشط فقط",
-          });
-        }
-
-        const teacher = await getTeacherForUser(
-          ctx.user.id,
-        );
-
-        if (!teacher) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "ملف المعلم غير موجود",
-          });
-        }
-
-        return listAvailability(teacher.profile.id);
-      }),
-
-      create: protectedProcedure
-        .input(availabilityInput)
-        .mutation(async ({ ctx, input }) => {
+      list: protectedProcedure.query(
+        async ({ ctx }) => {
           if (
             ctx.user.role !== "teacher" ||
-            ctx.user.accountStatus !== "active"
-          ) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "هذا الإجراء متاح للمعلم النشط فقط",
-            });
-          }
-
-          const teacher = await getTeacherForUser(
-            ctx.user.id,
-          );
-
-          if (!teacher) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "ملف المعلم غير موجود",
-            });
-          }
-
-          if (
-            teacher.profile.verificationStatus !==
-            "approved"
+            ctx.user.accountStatus !==
+              "active"
           ) {
             throw new TRPCError({
               code: "FORBIDDEN",
               message:
-                "يجب اعتماد حساب المعلم أولًا",
+                "هذا الإجراء متاح للمعلم النشط فقط",
             });
           }
 
-          return createAvailability(
+          const teacher =
+            await getTeacherForUser(
+              ctx.user.id,
+            );
+
+          if (!teacher) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message:
+                "ملف المعلم غير موجود",
+            });
+          }
+
+          return listAvailability(
             teacher.profile.id,
-            input,
           );
-        }),
+        },
+      ),
+
+      create: protectedProcedure
+        .input(availabilityInput)
+        .mutation(
+          async ({ ctx, input }) => {
+            if (
+              ctx.user.role !== "teacher" ||
+              ctx.user.accountStatus !==
+                "active"
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "هذا الإجراء متاح للمعلم النشط فقط",
+              });
+            }
+
+            const teacher =
+              await getTeacherForUser(
+                ctx.user.id,
+              );
+
+            if (!teacher) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "ملف المعلم غير موجود",
+              });
+            }
+
+            if (
+              teacher.profile
+                .verificationStatus !==
+              "approved"
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "يجب اعتماد حساب المعلم أولًا",
+              });
+            }
+
+            return createAvailability(
+              teacher.profile.id,
+              input,
+            );
+          },
+        ),
 
       update: protectedProcedure
         .input(
           z.object({
-            id: z.number().int().positive(),
+            id: z
+              .number()
+              .int()
+              .positive(),
+
             dayOfWeek: z
               .number()
               .int()
@@ -676,200 +1082,284 @@ export const appRouter = router({
               .max(6)
               .nullable()
               .optional(),
+
             specificDate: z
               .string()
               .regex(/^\d{4}-\d{2}-\d{2}$/)
               .nullable()
               .optional(),
+
             startTime: z
               .string()
               .regex(/^\d{2}:\d{2}$/)
               .optional(),
+
             endTime: z
               .string()
               .regex(/^\d{2}:\d{2}$/)
               .optional(),
+
             timezone: z
               .string()
               .min(1)
               .max(64)
               .optional(),
+
             status: z
-              .enum(["active", "inactive"])
+              .enum([
+                "active",
+                "inactive",
+              ])
               .optional(),
           }),
         )
-        .mutation(async ({ ctx, input }) => {
-          if (
-            ctx.user.role !== "teacher" ||
-            ctx.user.accountStatus !== "active"
-          ) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "هذا الإجراء متاح للمعلم النشط فقط",
-            });
-          }
+        .mutation(
+          async ({ ctx, input }) => {
+            if (
+              ctx.user.role !== "teacher" ||
+              ctx.user.accountStatus !==
+                "active"
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "هذا الإجراء متاح للمعلم النشط فقط",
+              });
+            }
 
-          const teacher = await getTeacherForUser(
-            ctx.user.id,
-          );
+            const teacher =
+              await getTeacherForUser(
+                ctx.user.id,
+              );
 
-          if (!teacher) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "ملف المعلم غير موجود",
-            });
-          }
+            if (!teacher) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "ملف المعلم غير موجود",
+              });
+            }
 
-          const { id, ...data } = input;
+            const {
+              id,
+              ...data
+            } = input;
 
-          return updateAvailability(
-            teacher.profile.id,
-            id,
-            data,
-          );
-        }),
+            return updateAvailability(
+              teacher.profile.id,
+              id,
+              data,
+            );
+          },
+        ),
 
       delete: protectedProcedure
         .input(
           z.object({
-            id: z.number().int().positive(),
+            id: z
+              .number()
+              .int()
+              .positive(),
           }),
         )
-        .mutation(async ({ ctx, input }) => {
+        .mutation(
+          async ({ ctx, input }) => {
+            if (
+              ctx.user.role !== "teacher" ||
+              ctx.user.accountStatus !==
+                "active"
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "هذا الإجراء متاح للمعلم النشط فقط",
+              });
+            }
+
+            const teacher =
+              await getTeacherForUser(
+                ctx.user.id,
+              );
+
+            if (!teacher) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "ملف المعلم غير موجود",
+              });
+            }
+
+            return deleteAvailability(
+              teacher.profile.id,
+              input.id,
+            );
+          },
+        ),
+    }),
+
+    /* =====================================================
+       TEACHER BOOKINGS
+    ===================================================== */
+
+    booking: router({
+      list: protectedProcedure.query(
+        async ({ ctx }) => {
           if (
             ctx.user.role !== "teacher" ||
-            ctx.user.accountStatus !== "active"
+            ctx.user.accountStatus !==
+              "active"
           ) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "هذا الإجراء متاح للمعلم النشط فقط",
+              message:
+                "هذا الإجراء متاح للمعلم النشط فقط",
             });
           }
 
-          const teacher = await getTeacherForUser(
-            ctx.user.id,
-          );
+          const teacher =
+            await getTeacherForUser(
+              ctx.user.id,
+            );
 
           if (!teacher) {
             throw new TRPCError({
               code: "NOT_FOUND",
-              message: "ملف المعلم غير موجود",
+              message:
+                "ملف المعلم غير موجود",
             });
           }
 
-          return deleteAvailability(
+          return listTeacherBookings(
             teacher.profile.id,
-            input.id,
           );
-        }),
-    }),
-
-    booking: router({
-      list: protectedProcedure.query(async ({ ctx }) => {
-        if (
-          ctx.user.role !== "teacher" ||
-          ctx.user.accountStatus !== "active"
-        ) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "هذا الإجراء متاح للمعلم النشط فقط",
-          });
-        }
-
-        const teacher = await getTeacherForUser(
-          ctx.user.id,
-        );
-
-        if (!teacher) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "ملف المعلم غير موجود",
-          });
-        }
-
-        return listTeacherBookings(
-          teacher.profile.id,
-        );
-      }),
+        },
+      ),
 
       get: protectedProcedure
         .input(
           z.object({
-            id: z.number().int().positive(),
+            id: z
+              .number()
+              .int()
+              .positive(),
           }),
         )
-        .query(async ({ ctx, input }) => {
-          if (
-            ctx.user.role !== "teacher" ||
-            ctx.user.accountStatus !== "active"
-          ) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "هذا الإجراء متاح للمعلم النشط فقط",
-            });
-          }
+        .query(
+          async ({ ctx, input }) => {
+            if (
+              ctx.user.role !== "teacher" ||
+              ctx.user.accountStatus !==
+                "active"
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "هذا الإجراء متاح للمعلم النشط فقط",
+              });
+            }
 
-          const teacher = await getTeacherForUser(
-            ctx.user.id,
-          );
+            const teacher =
+              await getTeacherForUser(
+                ctx.user.id,
+              );
 
-          if (!teacher) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "ملف المعلم غير موجود",
-            });
-          }
+            if (!teacher) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "ملف المعلم غير موجود",
+              });
+            }
 
-          const rows = await listTeacherBookings(
-            teacher.profile.id,
-          );
+            const rows =
+              await listTeacherBookings(
+                teacher.profile.id,
+              );
 
-          return rows.find(
-            (item) => item.booking.id === input.id,
-          );
-        }),
+            return rows.find(
+              (item) =>
+                item.booking.id ===
+                input.id,
+            );
+          },
+        ),
 
       updateStatus: protectedProcedure
-        .input(teacherBookingStatusInput)
-        .mutation(async ({ ctx, input }) => {
-          if (
-            ctx.user.role !== "teacher" ||
-            ctx.user.accountStatus !== "active"
-          ) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "هذا الإجراء متاح للمعلم النشط فقط",
-            });
-          }
+        .input(
+          z.object({
+            id: z
+              .number()
+              .int()
+              .positive(),
 
-          const teacher = await getTeacherForUser(
-            ctx.user.id,
-          );
+            status: z.enum([
+              "confirmed",
+              "rejected",
+              "completed",
+              "cancelled",
+            ]),
 
-          if (!teacher) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "ملف المعلم غير موجود",
-            });
-          }
+            reason: z
+              .string()
+              .trim()
+              .max(2000)
+              .optional()
+              .nullable(),
+          }),
+        )
+        .mutation(
+          async ({ ctx, input }) => {
+            if (
+              ctx.user.role !== "teacher" ||
+              ctx.user.accountStatus !==
+                "active"
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "هذا الإجراء متاح للمعلم النشط فقط",
+              });
+            }
 
-          return updateTeacherBookingStatus(
-            teacher.profile.id,
-            input.id,
-            input.status,
-            input.cancellationReason ?? null,
-          );
-        }),
+            const teacher =
+              await getTeacherForUser(
+                ctx.user.id,
+              );
+
+            if (!teacher) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "ملف المعلم غير موجود",
+              });
+            }
+
+            return updateTeacherBookingStatus(
+              teacher.profile.id,
+              input.id,
+              input.status,
+              input.reason ?? null,
+            );
+          },
+        ),
     }),
   }),
+
+  /* =======================================================
+     MARKETPLACE
+  ======================================================= */
 
   marketplace: router({
     teachers: publicProcedure
       .input(
         z
           .object({
-            page: z.number().int().min(1).default(1),
+            page: z
+              .number()
+              .int()
+              .min(1)
+              .default(1),
+
             pageSize: z
               .number()
               .int()
@@ -889,7 +1379,10 @@ export const appRouter = router({
     availability: publicProcedure
       .input(
         z.object({
-          teacherId: z.number().int().positive(),
+          teacherId: z
+            .number()
+            .int()
+            .positive(),
         }),
       )
       .query(async ({ input }) => {
@@ -901,50 +1394,81 @@ export const appRouter = router({
         if (!teacher) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "المعلم غير متاح للحجز",
+            message:
+              "المعلم غير متاح للحجز",
           });
         }
 
-        return listAvailability(teacher.id);
+        return listAvailability(
+          teacher.id,
+        );
       }),
   }),
 
-  admin: router({
-    overview: privilegedProcedure.query(async () => {
-      const students = await listStudentsForAdmin();
-      const teachers = await listTeacherApplications();
+  /* =======================================================
+     ADMIN
+  ======================================================= */
 
-      return {
-        studentCount: students.length,
-        teacherCount: teachers.length,
-      };
-    }),
+  admin: router({
+    overview: privilegedProcedure.query(
+      async () => {
+        const students =
+          await listStudentsForAdmin();
+
+        const teachers =
+          await listTeacherApplications();
+
+        return {
+          studentCount:
+            students.length,
+
+          teacherCount:
+            teachers.length,
+        };
+      },
+    ),
+
+    /* =====================================================
+       STUDENTS
+    ===================================================== */
 
     students: router({
-      list: privilegedProcedure.query(() =>
-        listStudentsForAdmin(),
+      list: privilegedProcedure.query(
+        () =>
+          listStudentsForAdmin(),
       ),
     }),
 
+    /* =====================================================
+       TEACHERS
+    ===================================================== */
+
     teachers: router({
-      list: privilegedProcedure.query(() =>
-        listTeacherApplications(),
+      list: privilegedProcedure.query(
+        () =>
+          listTeacherApplications(),
       ),
 
       get: privilegedProcedure
         .input(
           z.object({
-            id: z.number().int().positive(),
+            id: z
+              .number()
+              .int()
+              .positive(),
           }),
         )
         .query(async ({ input }) => {
           const result =
-            await getTeacherApplicationById(input.id);
+            await getTeacherApplicationById(
+              input.id,
+            );
 
           if (!result) {
             throw new TRPCError({
               code: "NOT_FOUND",
-              message: "طلب المعلم غير موجود",
+              message:
+                "طلب المعلم غير موجود",
             });
           }
 
@@ -954,53 +1478,75 @@ export const appRouter = router({
       approve: privilegedProcedure
         .input(
           z.object({
-            id: z.number().int().positive(),
+            id: z
+              .number()
+              .int()
+              .positive(),
           }),
         )
-        .mutation(async ({ ctx, input }) => {
-          const current =
-            await getTeacherApplicationById(input.id);
+        .mutation(
+          async ({ ctx, input }) => {
+            const current =
+              await getTeacherApplicationById(
+                input.id,
+              );
 
-          if (!current) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "طلب المعلم غير موجود",
-            });
-          }
+            if (!current) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "طلب المعلم غير موجود",
+              });
+            }
 
-          if (current.user.id === ctx.user.id) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message:
-                "لا يمكن اعتماد طلب الحساب الحالي",
-            });
-          }
+            if (
+              current.user.id ===
+              ctx.user.id
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "لا يمكن اعتماد طلب الحساب الحالي",
+              });
+            }
 
-          if (
-            !current.profile.fullName ||
-            !current.profile.qualification ||
-            !current.profile.specialization ||
-            !current.profile.subjects.length ||
-            !current.profile.educationStages.length ||
-            !current.profile.grades.length
-          ) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "طلب المعلم غير مكتمل",
-            });
-          }
+            if (
+              !current.profile.fullName ||
+              !current.profile
+                .qualification ||
+              !current.profile
+                .specialization ||
+              !current.profile.subjects
+                .length ||
+              !current.profile
+                .educationStages
+                .length ||
+              !current.profile.grades
+                .length
+            ) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                  "طلب المعلم غير مكتمل",
+              });
+            }
 
-          return reviewTeacherApplication(
-            input.id,
-            "approve",
-            ctx.user.id,
-          );
-        }),
+            return reviewTeacherApplication(
+              input.id,
+              "approve",
+              ctx.user.id,
+            );
+          },
+        ),
 
       reject: privilegedProcedure
         .input(
           z.object({
-            id: z.number().int().positive(),
+            id: z
+              .number()
+              .int()
+              .positive(),
+
             rejectionReason: z
               .string()
               .trim()
@@ -1008,67 +1554,94 @@ export const appRouter = router({
               .max(2000),
           }),
         )
-        .mutation(async ({ ctx, input }) => {
-          const current =
-            await getTeacherApplicationById(input.id);
+        .mutation(
+          async ({ ctx, input }) => {
+            const current =
+              await getTeacherApplicationById(
+                input.id,
+              );
 
-          if (!current) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "طلب المعلم غير موجود",
-            });
-          }
+            if (!current) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "طلب المعلم غير موجود",
+              });
+            }
 
-          if (current.user.id === ctx.user.id) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message:
-                "لا يمكن رفض طلب الحساب الحالي",
-            });
-          }
+            if (
+              current.user.id ===
+              ctx.user.id
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "لا يمكن رفض طلب الحساب الحالي",
+              });
+            }
 
-          return reviewTeacherApplication(
-            input.id,
-            "reject",
-            ctx.user.id,
-            input.rejectionReason,
-          );
-        }),
+            return reviewTeacherApplication(
+              input.id,
+              "reject",
+              ctx.user.id,
+              input.rejectionReason,
+            );
+          },
+        ),
 
       suspend: privilegedProcedure
         .input(
           z.object({
-            id: z.number().int().positive(),
-            reason: z.string().max(1000).optional(),
+            id: z
+              .number()
+              .int()
+              .positive(),
+
+            reason: z
+              .string()
+              .max(1000)
+              .optional(),
           }),
         )
-        .mutation(async ({ ctx, input }) => {
-          const current =
-            await getTeacherApplicationById(input.id);
+        .mutation(
+          async ({ ctx, input }) => {
+            const current =
+              await getTeacherApplicationById(
+                input.id,
+              );
 
-          if (!current) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "طلب المعلم غير موجود",
-            });
-          }
+            if (!current) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "طلب المعلم غير موجود",
+              });
+            }
 
-          if (current.user.id === ctx.user.id) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message:
-                "لا يمكن تعليق الحساب الحالي",
-            });
-          }
+            if (
+              current.user.id ===
+              ctx.user.id
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "لا يمكن تعليق الحساب الحالي",
+              });
+            }
 
-          return reviewTeacherApplication(
-            input.id,
-            "suspend",
-            ctx.user.id,
-            input.reason,
-          );
-        }),
+            return reviewTeacherApplication(
+              input.id,
+              "suspend",
+              ctx.user.id,
+              input.reason,
+            );
+          },
+        ),
     }),
+
+    /* =====================================================
+       USERS
+    ===================================================== */
 
     users: router({
       updateAccess: privilegedProcedure
@@ -1079,6 +1652,7 @@ export const appRouter = router({
                 .number()
                 .int()
                 .positive(),
+
               role: z
                 .enum([
                   "user",
@@ -1090,6 +1664,7 @@ export const appRouter = router({
                   "support",
                 ])
                 .optional(),
+
               accountStatus: z
                 .enum([
                   "active",
@@ -1097,130 +1672,179 @@ export const appRouter = router({
                   "deactivated",
                 ])
                 .optional(),
-              reason: z.string().max(1000).optional(),
+
+              reason: z
+                .string()
+                .max(1000)
+                .optional(),
             })
             .refine(
               (input) =>
-                input.role !== undefined ||
-                input.accountStatus !== undefined,
+                input.role !==
+                  undefined ||
+                input.accountStatus !==
+                  undefined,
               "يجب تحديد تغيير واحد على الأقل",
             ),
         )
-        .mutation(async ({ ctx, input }) => {
-          if (ctx.user.id === input.targetUserId) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message:
-                "لا يمكن تعديل صلاحيات الحساب الحالي",
-            });
-          }
+        .mutation(
+          async ({ ctx, input }) => {
+            if (
+              ctx.user.id ===
+              input.targetUserId
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "لا يمكن تعديل صلاحيات الحساب الحالي",
+              });
+            }
 
-          if (
-            input.role === "super_admin" &&
-            ctx.user.role !== "super_admin"
-          ) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message:
-                "تعيين super_admin متاح لـsuper_admin فقط",
-            });
-          }
+            if (
+              input.role ===
+                "super_admin" &&
+              ctx.user.role !==
+                "super_admin"
+            ) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                  "تعيين super_admin متاح لـsuper_admin فقط",
+              });
+            }
 
-          const current = await getStudentProfile(
-            input.targetUserId,
-          );
+            const current =
+              await getStudentProfile(
+                input.targetUserId,
+              );
 
-          if (!current && input.role === "student") {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message:
-                "أنشئ ملف الطالب قبل تعيين الدور",
-            });
-          }
+            if (
+              !current &&
+              input.role === "student"
+            ) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                  "أنشئ ملف الطالب قبل تعيين الدور",
+              });
+            }
 
-          const existingBefore = await getUserById(
-            input.targetUserId,
-          );
+            const existingBefore =
+              await getUserById(
+                input.targetUserId,
+              );
 
-          if (!existingBefore) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "المستخدم غير موجود",
-            });
-          }
+            if (!existingBefore) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "المستخدم غير موجود",
+              });
+            }
 
-          if (
-            existingBefore.role === "super_admin" &&
-            (
-              (input.role !== undefined &&
-                input.role !== "super_admin") ||
-              (input.accountStatus !== undefined &&
-                input.accountStatus !== "active")
-            ) &&
-            (await countSuperAdmins()) <= 1
-          ) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message:
-                "لا يمكن إزالة آخر super_admin",
-            });
-          }
+            if (
+              existingBefore.role ===
+                "super_admin" &&
+              (
+                (
+                  input.role !==
+                    undefined &&
+                  input.role !==
+                    "super_admin"
+                ) ||
+                (
+                  input.accountStatus !==
+                    undefined &&
+                  input.accountStatus !==
+                    "active"
+                )
+              ) &&
+              (await countSuperAdmins()) <=
+                1
+            ) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                  "لا يمكن إزالة آخر super_admin",
+              });
+            }
 
-          const existing =
-            await updateUserAccessWithAudit(
-              input.targetUserId,
-              {
-                role: input.role,
-                accountStatus:
-                  input.accountStatus,
-              },
-              ctx.user.id,
-              input.reason,
-            );
+            const existing =
+              await updateUserAccessWithAudit(
+                input.targetUserId,
+                {
+                  role: input.role,
+                  accountStatus:
+                    input.accountStatus,
+                },
+                ctx.user.id,
+                input.reason,
+              );
 
-          if (!existing) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "المستخدم غير موجود",
-            });
-          }
+            if (!existing) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "المستخدم غير موجود",
+              });
+            }
 
-          return existing.after;
-        }),
+            return existing.after;
+          },
+        ),
     }),
+
+    /* =====================================================
+       PARENT / STUDENT RELATIONSHIPS
+    ===================================================== */
 
     relationships: router({
       setStatus: privilegedProcedure
         .input(
           z.object({
-            id: z.number().int().positive(),
+            id: z
+              .number()
+              .int()
+              .positive(),
+
             status: z.enum([
               "pending",
               "active",
               "revoked",
             ]),
-            reason: z.string().max(1000).optional(),
+
+            reason: z
+              .string()
+              .max(1000)
+              .optional(),
           }),
         )
-        .mutation(async ({ ctx, input }) => {
-          const result =
-            await setRelationshipStatusWithAudit(
-              input.id,
-              input.status,
-              ctx.user.id,
-              input.reason,
-            );
+        .mutation(
+          async ({ ctx, input }) => {
+            const result =
+              await setRelationshipStatusWithAudit(
+                input.id,
+                input.status,
+                ctx.user.id,
+                input.reason,
+              );
 
-          if (!result) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "العلاقة غير موجودة",
-            });
-          }
-        }),
+            if (!result) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "العلاقة غير موجودة",
+              });
+            }
+
+            return {
+              success: true,
+            } as const;
+          },
+        ),
     }),
   }),
 });
 
-export type AppRouter = typeof appRouter;
-
+export type AppRouter =
+  typeof appRouter;
