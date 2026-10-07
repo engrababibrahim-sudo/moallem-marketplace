@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Cairo", sans-serif;
+}
+
+:root {
+  font-family: "Cairo", sans-serif;
+  color: #182431;
+  background: #fbf8f4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; }
+button, a, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgb(255 122 0 / .42); outline-offset: 3px; }
+button:active, a:active { transform: scale(.98); }
+a { color: inherit; text-decoration: none; }
+::selection { background: #ffd7b5; color: #182431; }
+
+@media (prefers-reduced-motion: no-preference) {
+  a, button, article, .group { transition: transform .18s var(--ease-out), box-shadow .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease; }
+}
+
+.dark { color-scheme: dark; }
+.dark body { background: #101821; color: #f4f0eb; }
+.dark input, .dark textarea, .dark select { color: #f8fafc; }
+.dark [class*="bg-white"] { background-color: #1e293b !important; color: #e5e7eb; }
+.dark [class*="bg-[#fbf8f4]"] { background-color: #101821 !important; }
+.dark [class*="bg-[#f2ece5]"] { background-color: #17232c !important; }
+.dark [class*="text-[#182431]"] { color: #e5e7eb !important; }
+.dark [class*="border-[#182431]"] { border-color: rgb(226 232 240 / .18) !important; }
+.dark [class*="text-[#182431]/"] { color: rgb(226 232 240 / .68) !important; }

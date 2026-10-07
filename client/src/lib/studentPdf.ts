@@ -1,0 +1,15 @@
+type ExportData = {
+  user?: { name?: string | null; email?: string | null } | null;
+  profile?: Record<string, unknown> | null;
+  learning?: Record<string, unknown> | null;
+  bookings: Array<{ booking: { startAt: string | Date; status: string }; teacher: { fullName?: string | null } }>;
+};
+
+const escapeHtml = (value: unknown) => String(value ?? "—").replace(/[&<>\"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[char] as string));
+const value = (data: ExportData, key: string) => escapeHtml(data.profile?.[key] || data.learning?.[key] || (data.user as Record<string, unknown> | null | undefined)?.[key]);
+
+export function buildStudentPdfDocument(data: ExportData) {
+  const history = data.bookings.length ? data.bookings.map(item => `<tr><td>${escapeHtml(item.teacher?.fullName)}</td><td>${escapeHtml(new Date(item.booking.startAt).toLocaleDateString("ar-EG"))}</td><td>${escapeHtml(item.booking.status)}</td></tr>`).join("") : `<tr><td colspan="3">لا توجد حصص مسجلة</td></tr>`;
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>ملف الطالب - ${value(data, "fullName")}</title><style>@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap');body{font-family:'Noto Naskh Arabic',Arial,sans-serif;color:#182431;margin:0;background:#fbf8f4}main{max-width:850px;margin:0 auto;background:#fff;padding:42px}h1{margin:0;color:#ff7a00;font-size:30px}h2{margin-top:30px;border-bottom:2px solid #fff0e2;padding-bottom:8px;color:#182431}p{margin:5px 0}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border-bottom:1px solid #e6e8e5;padding:10px;text-align:right}@media print{body{background:#fff}main{max-width:none;padding:0}}
+</style></head><body><main><h1>ملف الطالب</h1><p>نُخبة · تقرير مُصدّر من الحساب الحالي</p><h2>المعلومات الأساسية</h2><p><b>الاسم:</b> ${value(data, "fullName")}</p><p><b>البريد الإلكتروني:</b> ${escapeHtml(data.user?.email)}</p><p><b>الهاتف:</b> غير متوفر في الملف الحالي</p><p><b>الدولة والمدينة:</b> غير متوفر في الملف الحالي</p><p><b>المرحلة التعليمية:</b> ${value(data, "educationStage")}</p><p><b>الصف:</b> ${value(data, "grade")}</p><p><b>المستوى:</b> ${value(data, "learningLevel")}</p><h2>التفضيلات والمعلومات التعليمية</h2><p><b>المواد المفضلة:</b> ${escapeHtml(Array.isArray(data.profile?.preferredSubjects) ? data.profile?.preferredSubjects.join("، ") : data.profile?.preferredSubjects)}</p><p><b>أهداف التعلم:</b> ${value(data, "learningGoals")}</p><p><b>نقاط القوة:</b> ${value(data, "strengths")}</p><p><b>الصعوبات:</b> ${value(data, "difficulties")}</p><p><b>صيغة التعلم:</b> ${value(data, "preferredLearningFormat")}</p><h2>سجل التعلم والحصص</h2><p><b>الهدف الحالي:</b> ${escapeHtml(data.learning?.goal)}</p><p><b>المادة الحالية:</b> ${escapeHtml(data.learning?.subject)}</p><p><b>المستوى الحالي:</b> ${escapeHtml(data.learning?.level)}</p><table><thead><tr><th>المعلم</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>${history}</tbody></table></main><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));</script></body></html>`;
+}

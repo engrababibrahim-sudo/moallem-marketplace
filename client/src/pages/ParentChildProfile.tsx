@@ -1,0 +1,12 @@
+import { Link, useRoute } from "wouter";
+import { ArrowRight, ShieldCheck } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+
+export default function ParentChildProfile() {
+  const [, params] = useRoute("/parent/children/:studentId");
+  const studentUserId = Number(params?.studentId);
+  const child = trpc.parent.children.get.useQuery({ studentUserId }, { enabled: Number.isInteger(studentUserId) && studentUserId > 0 });
+  const learning = trpc.student.learningProfile.get.useQuery({ studentUserId }, { enabled: Number.isInteger(studentUserId) && studentUserId > 0 });
+  return <div dir="rtl" className="min-h-screen bg-[#fbf8f4] text-[#182431]"><header className="border-b border-[#182431]/10 px-5 py-5"><div className="mx-auto flex max-w-4xl items-center justify-between"><Link href="/parent/children" className="flex items-center gap-2 text-sm font-bold text-[#ff7a00]"><ArrowRight className="h-4 w-4" />أبنائي</Link><b className="text-xl">نُخبة</b></div></header><main className="mx-auto max-w-4xl px-5 py-10">{child.isLoading ? <p>جارٍ تحميل الملف…</p> : child.isError ? <div className="rounded-2xl bg-white p-8"><h1 className="text-2xl font-bold">لا يمكن الوصول إلى الملف</h1><p className="mt-3 text-sm leading-7 text-[#182431]/55">يجب أن يكون الطالب مرتبطًا بحسابك بعلاقة نشطة.</p></div> : child.data && <><p className="text-sm font-bold text-[#ff7a00]">عرض ولي الأمر</p><h1 className="mt-2 text-4xl font-bold">{child.data.fullName || "ملف الطالب"}</h1><p className="mt-3 text-[#182431]/55">{child.data.educationStage || "—"} · {child.data.grade || "—"}</p><div className="mt-8 rounded-2xl border border-[#ff7a00]/15 bg-[#fff0e2] p-4 text-sm text-[#ff7a00]"><ShieldCheck className="ml-2 inline h-4 w-4" />تم التحقق من العلاقة النشطة على الخادم.</div><section className="mt-6 rounded-[2rem] bg-white p-6"><h2 className="text-xl font-bold">Learning Profile</h2>{learning.data ? <div className="mt-5 grid gap-4 sm:grid-cols-2"><Info label="المادة" value={learning.data.subject} /><Info label="الهدف" value={learning.data.goal} /><Info label="المستوى" value={learning.data.level} /><Info label="الوقت" value={learning.data.time} /></div> : <p className="mt-4 text-sm text-[#182431]/55">لا يوجد Learning Profile محفوظ بعد.</p>}</section></>}</main></div>;
+}
+function Info({ label, value }: { label: string; value: string | null | undefined }) { return <div className="rounded-xl bg-[#fbf8f4] p-4"><span className="text-xs text-[#182431]/50">{label}</span><b className="mt-2 block">{value || "—"}</b></div>; }

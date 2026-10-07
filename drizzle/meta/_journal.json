@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1790490239273,
+      "tag": "0000_complex_infant_terrible",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1790491040281,
+      "tag": "0001_unusual_bruce_banner",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1790491191767,
+      "tag": "0002_empty_silverclaw",
+      "breakpoints": true
+    }
+  ]
+}

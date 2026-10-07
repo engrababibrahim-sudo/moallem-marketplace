@@ -1,0 +1,3 @@
+import { Link } from "wouter";
+export default function AdminPlaceholder({ title }: { title: string }) { return <main dir="rtl" className="min-h-screen bg-[#fbf8f4] px-5 py-10 text-[#182431] lg:px-16"><div className="mx-auto max-w-5xl"><Link href="/admin" className="text-sm font-bold text-[#ff7a00]">لوحة الإدارة</Link><h1 className="mt-5 text-3xl font-bold">إدارة {title}</h1><div className="mt-8 rounded-3xl bg-white p-10 shadow-sm"><p className="text-sm leading-7 text-[#182431]/60">هذه الصفحة محمية ومهيأة ضمن مسارات الإدارة. سيتم ربط بيانات {title} من الإجراءات الحالية عند تفعيل هذا القسم.</p></div></div></main>; }
+
