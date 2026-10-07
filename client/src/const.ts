@@ -13,8 +13,12 @@ export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 // with "invalid oauth state". It returns void by design, so there is no URL to
 // stash across renders.
 export const startLogin = (returnTo?: string) => {
-  const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
+  const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL || "https://api.manus.im";
   const appId = import.meta.env.VITE_APP_ID;
+
+  if (!appId) {
+    throw new Error("خدمة تسجيل الدخول غير مهيأة على هذا الموقع. يجب ضبط VITE_APP_ID في بيئة النشر.");
+  }
   const redirectUri = `${window.location.origin}/api/oauth/callback`;
 
   if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
