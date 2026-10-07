@@ -53,11 +53,13 @@ export function useAuth(options?: UseAuthOptions) {
   const state = useMemo(() => ({
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
-      error: meQuery.error ?? logoutMutation.error ?? null,
+      // auth.me is a public session probe: an unauthenticated visitor is a
+      // normal state, so do not surface its transport/auth error as a login
+      // failure on the /auth page. Real logout errors remain visible.
+      error: logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
     }), [
     meQuery.data,
-    meQuery.error,
     meQuery.isLoading,
     logoutMutation.error,
     logoutMutation.isPending,
