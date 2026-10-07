@@ -1,3 +1,4 @@
+
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
@@ -14,10 +15,6 @@ import {
   canCreateParentChildLink,
   isAdmin,
 } from "./authorization";
-
-import {
-  parentProcedure as _parentProcedure,
-} from "./_core/trpc";
 
 import {
   createParentStudentLink,
@@ -57,6 +54,8 @@ import {
   createBooking,
   deleteAvailability,
   getEligibleTeacherForPublicAvailability,
+  getStudentBooking,
+  getTeacherBooking,
   getTeacherForUser,
   listAvailability,
   listStudentBookings,
@@ -71,21 +70,54 @@ import {
 
 const studentProfileInput = z.object({
   fullName: z.string().max(255).optional().nullable(),
-  educationStage: z.string().max(100).optional().nullable(),
-  grade: z.string().max(100).optional().nullable(),
+
+  educationStage: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  grade: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
   preferredSubjects: z
     .array(z.string().max(100))
     .max(30)
     .optional(),
-  learningLevel: z.string().max(100).optional().nullable(),
-  learningGoals: z.string().max(5000).optional().nullable(),
-  strengths: z.string().max(5000).optional().nullable(),
-  difficulties: z.string().max(5000).optional().nullable(),
+
+  learningLevel: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  learningGoals: z
+    .string()
+    .max(5000)
+    .optional()
+    .nullable(),
+
+  strengths: z
+    .string()
+    .max(5000)
+    .optional()
+    .nullable(),
+
+  difficulties: z
+    .string()
+    .max(5000)
+    .optional()
+    .nullable(),
+
   preferredLearningFormat: z
     .string()
     .max(100)
     .optional()
     .nullable(),
+
   preferredAvailability: z
     .array(z.string().max(100))
     .max(30)
@@ -97,17 +129,72 @@ const studentProfileInput = z.object({
 ========================================================= */
 
 const learningProfileInput = z.object({
-  role: z.string().max(100).optional().nullable(),
-  grade: z.string().max(100).optional().nullable(),
-  stage: z.string().max(100).optional().nullable(),
-  subject: z.string().max(150).optional().nullable(),
-  goal: z.string().max(5000).optional().nullable(),
-  level: z.string().max(100).optional().nullable(),
-  difficulties: z.string().max(5000).optional().nullable(),
-  needs: z.string().max(5000).optional().nullable(),
-  format: z.string().max(150).optional().nullable(),
-  availability: z.string().max(150).optional().nullable(),
-  time: z.string().max(150).optional().nullable(),
+  role: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  grade: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  stage: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  subject: z
+    .string()
+    .max(150)
+    .optional()
+    .nullable(),
+
+  goal: z
+    .string()
+    .max(5000)
+    .optional()
+    .nullable(),
+
+  level: z
+    .string()
+    .max(100)
+    .optional()
+    .nullable(),
+
+  difficulties: z
+    .string()
+    .max(5000)
+    .optional()
+    .nullable(),
+
+  needs: z
+    .string()
+    .max(5000)
+    .optional()
+    .nullable(),
+
+  format: z
+    .string()
+    .max(150)
+    .optional()
+    .nullable(),
+
+  availability: z
+    .string()
+    .max(150)
+    .optional()
+    .nullable(),
+
+  time: z
+    .string()
+    .max(150)
+    .optional()
+    .nullable(),
+
   answers: z
     .record(z.string(), z.string())
     .optional(),
@@ -118,7 +205,11 @@ const learningProfileInput = z.object({
 ========================================================= */
 
 const teacherApplicationInput = z.object({
-  fullName: z.string().trim().min(2).max(255),
+  fullName: z
+    .string()
+    .trim()
+    .min(2)
+    .max(255),
 
   phone: z
     .string()
@@ -264,6 +355,8 @@ const availabilityInput = z.object({
 ========================================================= */
 
 /*
+ * مهم:
+ *
  * السعر لا يأتي من الواجهة.
  *
  * الواجهة ترسل:
@@ -274,11 +367,14 @@ const availabilityInput = z.object({
  * timezone
  * notes
  *
- * والسيرفر هو الذي يحسب:
+ * والسيرفر يحسب:
  * durationMinutes
  * hourlyRateSnapshot
  * totalPrice
  * currency
+ *
+ * بهذه الطريقة لا يستطيع الطالب التلاعب بالسعر
+ * من خلال الـ frontend.
  */
 
 const bookingCreateInput = z.object({
@@ -637,6 +733,10 @@ export const appRouter = router({
     ===================================================== */
 
     booking: router({
+      /* ===================================================
+         CREATE
+      =================================================== */
+
       create: protectedProcedure
         .input(bookingCreateInput)
         .mutation(async ({ ctx, input }) => {
@@ -674,27 +774,42 @@ export const appRouter = router({
             });
           }
 
-          return createBooking(
-            ctx.user.id,
-            {
-              teacherId:
-                input.teacherId,
+          try {
+            return await createBooking(
+              ctx.user.id,
+              {
+                teacherId:
+                  input.teacherId,
 
-              subject:
-                input.subject,
+                subject:
+                  input.subject,
 
-              startAt,
+                startAt,
 
-              endAt,
+                endAt,
 
-              timezone:
-                input.timezone,
+                timezone:
+                  input.timezone,
 
-              notes:
-                input.notes ?? null,
-            },
-          );
+                notes:
+                  input.notes ?? null,
+              },
+            );
+          } catch (error) {
+            if (error instanceof Error) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: error.message,
+              });
+            }
+
+            throw error;
+          }
         }),
+
+      /* ===================================================
+         LIST
+      =================================================== */
 
       list: protectedProcedure.query(
         async ({ ctx }) => {
@@ -715,6 +830,53 @@ export const appRouter = router({
           );
         },
       ),
+
+      /* ===================================================
+         GET SINGLE BOOKING
+      =================================================== */
+
+      get: protectedProcedure
+        .input(
+          z.object({
+            id: z
+              .number()
+              .int()
+              .positive(),
+          }),
+        )
+        .query(async ({ ctx, input }) => {
+          if (
+            ctx.user.role !== "student" ||
+            ctx.user.accountStatus !==
+              "active"
+          ) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message:
+                "هذا الإجراء متاح للطالب النشط فقط",
+            });
+          }
+
+          const booking =
+            await getStudentBooking(
+              ctx.user.id,
+              input.id,
+            );
+
+          if (!booking) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message:
+                "الحجز غير موجود",
+            });
+          }
+
+          return booking;
+        }),
+
+      /* ===================================================
+         CANCEL
+      =================================================== */
 
       cancel: protectedProcedure
         .input(
@@ -745,11 +907,22 @@ export const appRouter = router({
             });
           }
 
-          return cancelStudentBooking(
-            ctx.user.id,
-            input.id,
-            input.reason ?? null,
-          );
+          try {
+            return await cancelStudentBooking(
+              ctx.user.id,
+              input.id,
+              input.reason ?? null,
+            );
+          } catch (error) {
+            if (error instanceof Error) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: error.message,
+              });
+            }
+
+            throw error;
+          }
         }),
     }),
   }),
@@ -1202,6 +1375,10 @@ export const appRouter = router({
     ===================================================== */
 
     booking: router({
+      /* ===================================================
+         LIST
+      =================================================== */
+
       list: protectedProcedure.query(
         async ({ ctx }) => {
           if (
@@ -1234,6 +1411,10 @@ export const appRouter = router({
           );
         },
       ),
+
+      /* ===================================================
+         GET SINGLE BOOKING
+      =================================================== */
 
       get: protectedProcedure
         .input(
@@ -1271,18 +1452,27 @@ export const appRouter = router({
               });
             }
 
-            const rows =
-              await listTeacherBookings(
+            const booking =
+              await getTeacherBooking(
                 teacher.profile.id,
+                input.id,
               );
 
-            return rows.find(
-              (item) =>
-                item.booking.id ===
-                input.id,
-            );
+            if (!booking) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "الحجز غير موجود",
+              });
+            }
+
+            return booking;
           },
         ),
+
+      /* ===================================================
+         UPDATE STATUS
+      =================================================== */
 
       updateStatus: protectedProcedure
         .input(
@@ -1334,12 +1524,40 @@ export const appRouter = router({
               });
             }
 
-            return updateTeacherBookingStatus(
-              teacher.profile.id,
-              input.id,
-              input.status,
-              input.reason ?? null,
-            );
+            try {
+              const result =
+                await updateTeacherBookingStatus(
+                  teacher.profile.id,
+                  input.id,
+                  input.status,
+                  input.reason ?? null,
+                );
+
+              if (!result) {
+                throw new TRPCError({
+                  code: "NOT_FOUND",
+                  message:
+                    "الحجز غير موجود",
+                });
+              }
+
+              return result;
+            } catch (error) {
+              if (
+                error instanceof TRPCError
+              ) {
+                throw error;
+              }
+
+              if (error instanceof Error) {
+                throw new TRPCError({
+                  code: "BAD_REQUEST",
+                  message: error.message,
+                });
+              }
+
+              throw error;
+            }
           },
         ),
     }),
@@ -1846,5 +2064,10 @@ export const appRouter = router({
   }),
 });
 
+/* =========================================================
+   TRPC ROUTER TYPE
+========================================================= */
+
 export type AppRouter =
   typeof appRouter;
+
