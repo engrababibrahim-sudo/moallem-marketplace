@@ -1,3 +1,4 @@
+```ts
 import { and, eq, gt, lt, or, asc, desc } from "drizzle-orm";
 import {
   bookings,
@@ -13,6 +14,13 @@ export type BookingStatus =
   | "cancelled"
   | "completed"
   | "rejected";
+
+export type BookingPaymentStatus =
+  | "unpaid"
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded";
 
 export function isEligibleTeacherState(state: {
   role: string;
@@ -73,8 +81,44 @@ function ensureTimeWindow(startAt: Date, endAt: Date) {
   }
 }
 
+function calculateDurationMinutes(startAt: Date, endAt: Date) {
+  const duration = Math.round(
+    (endAt.getTime() - startAt.getTime()) / (1000 * 60),
+  );
+
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error("مدة الحجز غير صالحة");
+  }
+
+  return duration;
+}
+
+function calculateBookingPrice(
+  durationMinutes: number,
+  hourlyRate: number | null | undefined,
+) {
+  const rate = Number(hourlyRate ?? 0);
+
+  if (!Number.isFinite(rate) || rate < 0) {
+    throw new Error("سعر المعلم غير صالح");
+  }
+
+  return Math.round((rate * durationMinutes) / 60);
+}
+
+function normalizeCurrency(currency: string | null | undefined) {
+  const normalized = String(currency ?? "EGP").trim().toUpperCase();
+
+  if (!/^[A-Z]{3}$/.test(normalized)) {
+    return "EGP";
+  }
+
+  return normalized;
+}
+
 export async function getTeacherForUser(userId: number) {
   const db = await getDb();
+
   if (!db) return undefined;
 
   const rows = await db
@@ -94,6 +138,7 @@ export async function getEligibleTeacherForPublicAvailability(
   teacherId: number,
 ) {
   const db = await getDb();
+
   if (!db) return undefined;
 
   const rows = await db
@@ -219,6 +264,8 @@ export async function createBooking(
     endAt: Date;
     timezone: string;
     notes?: string | null;
+    subject?: string | null;
+    currency?: string | null;
   },
 ) {
   const db = await getDb();
@@ -228,6 +275,11 @@ export async function createBooking(
   }
 
   ensureTimeWindow(input.startAt, input.endAt);
+
+  const durationMinutes = calculateDurationMinutes(
+    input.startAt,
+    input.endAt,
+  );
 
   return db.transaction(async (tx) => {
     const studentRows = await tx
@@ -247,7 +299,7 @@ export async function createBooking(
       throw new Error("الطالب غير مصرح له بالحجز");
     }
 
-    await getEligibleTeacher(tx, input.teacherId);
+    const teacher = await getEligibleTeacher(tx, input.teacherId);
 
     await assertAvailability(
       tx,
@@ -291,6 +343,15 @@ export async function createBooking(
       throw new Error("لدى الطالب حجز متعارض");
     }
 
+    const hourlyRate = teacher.profile.hourlyRate ?? 0;
+
+    const totalPrice = calculateBookingPrice(
+      durationMinutes,
+      hourlyRate,
+    );
+
+    const currency = normalizeCurrency(input.currency);
+
     const result = await tx.insert(bookings).values({
       studentId,
       teacherId: input.teacherId,
@@ -298,7 +359,20 @@ export async function createBooking(
       endAt: input.endAt,
       timezone: input.timezone,
       notes: input.notes ?? null,
+      subject: input.subject ?? null,
+
+      durationMinutes,
+      hourlyRateSnapshot: hourlyRate,
+      totalPrice,
+      currency,
+
       status: "pending",
+      paymentStatus: "unpaid",
+
+      cancelledBy: null,
+      cancelledAt: null,
+      cancellationReason: null,
+      completedAt: null,
     });
 
     const id = Number(result[0].insertId);
@@ -504,6 +578,7 @@ export async function deleteAvailability(
 export async function cancelStudentBooking(
   studentId: number,
   id: number,
+  cancellationReason?: string | null,
 ) {
   const db = await getDb();
 
@@ -515,6 +590,9 @@ export async function cancelStudentBooking(
     .update(bookings)
     .set({
       status: "cancelled",
+      cancelledBy: "student",
+      cancelledAt: new Date(),
+      cancellationReason: cancellationReason ?? null,
       updatedAt: new Date(),
     })
     .where(
@@ -541,6 +619,7 @@ export async function updateTeacherBookingStatus(
   teacherId: number,
   id: number,
   status: BookingStatus,
+  cancellationReason?: string | null,
 ) {
   const db = await getDb();
 
@@ -572,12 +651,30 @@ export async function updateTeacherBookingStatus(
     throw new Error("انتقال حالة الحجز غير مسموح");
   }
 
+  const updateData: Record<string, unknown> = {
+    status,
+    updatedAt: new Date(),
+  };
+
+  if (status === "rejected") {
+    updateData.cancelledBy = "teacher";
+    updateData.cancelledAt = new Date();
+    updateData.cancellationReason = cancellationReason ?? null;
+  }
+
+  if (status === "cancelled") {
+    updateData.cancelledBy = "teacher";
+    updateData.cancelledAt = new Date();
+    updateData.cancellationReason = cancellationReason ?? null;
+  }
+
+  if (status === "completed") {
+    updateData.completedAt = new Date();
+  }
+
   await db
     .update(bookings)
-    .set({
-      status,
-      updatedAt: new Date(),
-    })
+    .set(updateData)
     .where(
       and(
         eq(bookings.id, id),
@@ -593,4 +690,4 @@ export async function updateTeacherBookingStatus(
       .limit(1)
   )[0];
 }
-
+```
