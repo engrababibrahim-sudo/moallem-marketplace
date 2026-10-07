@@ -1,4 +1,4 @@
-```ts
+
 import { and, eq, gt, lt, or, asc, desc } from "drizzle-orm";
 import {
   bookings,
@@ -690,4 +690,3 @@ export async function updateTeacherBookingStatus(
       .limit(1)
   )[0];
 }
-```
