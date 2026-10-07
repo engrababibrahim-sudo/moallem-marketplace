@@ -1,3 +1,4 @@
+
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
@@ -11,6 +12,10 @@ import {
   router,
 } from "./_core/trpc";
 import { canCreateParentChildLink, isAdmin } from "./authorization";
+import {
+  parentProfiles,
+  users,
+} from "../drizzle/schema";
 import {
   createParentStudentLink,
   countSuperAdmins,
@@ -128,17 +133,51 @@ const availabilityInput = z.object({
   timezone: z.string().min(1).max(64).default("UTC"),
 });
 
+const createBookingInput = z.object({
+  teacherId: z.number().int().positive(),
+  startAt: z.string().datetime(),
+  endAt: z.string().datetime(),
+  timezone: z.string().min(1).max(64).default("UTC"),
+  notes: z.string().max(5000).optional().nullable(),
+  subject: z.string().trim().max(150).optional().nullable(),
+  currency: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{3}$/)
+    .transform((value) => value.toUpperCase())
+    .optional(),
+});
+
+const cancellationInput = z.object({
+  id: z.number().int().positive(),
+  cancellationReason: z.string().trim().max(2000).optional().nullable(),
+});
+
+const teacherBookingStatusInput = z.object({
+  id: z.number().int().positive(),
+  status: z.enum([
+    "confirmed",
+    "rejected",
+    "completed",
+    "cancelled",
+  ]),
+  cancellationReason: z.string().trim().max(2000).optional().nullable(),
+});
+
 export const appRouter = router({
   system: systemRouter,
 
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
+
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
+
       ctx.res.clearCookie(COOKIE_NAME, {
         ...cookieOptions,
         maxAge: -1,
       });
+
       return { success: true } as const;
     }),
   }),
@@ -146,19 +185,65 @@ export const appRouter = router({
   student: router({
     favorites: router({
       list: protectedProcedure.query(async ({ ctx }) => {
-        if (ctx.user.role !== "student") throw new TRPCError({ code: "FORBIDDEN", message: "المفضلة متاحة للطلاب فقط" });
+        if (ctx.user.role !== "student") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "المفضلة متاحة للطلاب فقط",
+          });
+        }
+
         return listStudentFavorites(ctx.user.id);
       }),
-      add: protectedProcedure.input(z.object({ favoriteType: z.enum(["teacher", "course"]), targetId: z.string().trim().min(1).max(128), title: z.string().trim().min(1).max(255) })).mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "student") throw new TRPCError({ code: "FORBIDDEN", message: "المفضلة متاحة للطلاب فقط" });
-        return addStudentFavorite(ctx.user.id, input.favoriteType, input.targetId, input.title);
-      }),
-      remove: protectedProcedure.input(z.object({ favoriteType: z.enum(["teacher", "course"]), targetId: z.string().trim().min(1).max(128) })).mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "student") throw new TRPCError({ code: "FORBIDDEN", message: "المفضلة متاحة للطلاب فقط" });
-        await removeStudentFavorite(ctx.user.id, input.favoriteType, input.targetId);
-        return { success: true } as const;
-      }),
+
+      add: protectedProcedure
+        .input(
+          z.object({
+            favoriteType: z.enum(["teacher", "course"]),
+            targetId: z.string().trim().min(1).max(128),
+            title: z.string().trim().min(1).max(255),
+          }),
+        )
+        .mutation(async ({ ctx, input }) => {
+          if (ctx.user.role !== "student") {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "المفضلة متاحة للطلاب فقط",
+            });
+          }
+
+          return addStudentFavorite(
+            ctx.user.id,
+            input.favoriteType,
+            input.targetId,
+            input.title,
+          );
+        }),
+
+      remove: protectedProcedure
+        .input(
+          z.object({
+            favoriteType: z.enum(["teacher", "course"]),
+            targetId: z.string().trim().min(1).max(128),
+          }),
+        )
+        .mutation(async ({ ctx, input }) => {
+          if (ctx.user.role !== "student") {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "المفضلة متاحة للطلاب فقط",
+            });
+          }
+
+          await removeStudentFavorite(
+            ctx.user.id,
+            input.favoriteType,
+            input.targetId,
+          );
+
+          return { success: true } as const;
+        }),
     }),
+
     profile: router({
       get: protectedProcedure
         .input(
@@ -170,14 +255,34 @@ export const appRouter = router({
         )
         .query(({ ctx, input }) => {
           const userId = input?.userId ?? ctx.user.id;
+
           assertSelfOrAdmin(ctx.user, userId);
+
           return getStudentProfile(userId);
         }),
 
       exportData: protectedProcedure.query(async ({ ctx }) => {
-        if (ctx.user.role !== "student") throw new TRPCError({ code: "FORBIDDEN", message: "تصدير الملف متاح للطلاب فقط" });
-        const [user, profile, learning, bookings] = await Promise.all([getUserById(ctx.user.id), getStudentProfile(ctx.user.id), getLearningProfile(ctx.user.id), listStudentBookings(ctx.user.id)]);
-        return { user, profile, learning, bookings };
+        if (ctx.user.role !== "student") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "تصدير الملف متاح للطلاب فقط",
+          });
+        }
+
+        const [user, profile, learning, bookings] =
+          await Promise.all([
+            getUserById(ctx.user.id),
+            getStudentProfile(ctx.user.id),
+            getLearningProfile(ctx.user.id),
+            listStudentBookings(ctx.user.id),
+          ]);
+
+        return {
+          user,
+          profile,
+          learning,
+          bookings,
+        };
       }),
 
       update: protectedProcedure
@@ -188,11 +293,21 @@ export const appRouter = router({
         )
         .mutation(async ({ ctx, input }) => {
           const { userId = ctx.user.id, ...data } = input;
+
           assertSelfOrAdmin(ctx.user, userId);
-          const profile = await upsertStudentProfile(userId, data);
-          if (userId === ctx.user.id && ctx.user.role === "user") {
+
+          const profile = await upsertStudentProfile(
+            userId,
+            data,
+          );
+
+          if (
+            userId === ctx.user.id &&
+            ctx.user.role === "user"
+          ) {
             await provisionStudentUser(ctx.user.id);
           }
+
           return profile;
         }),
     }),
@@ -207,10 +322,17 @@ export const appRouter = router({
             .optional(),
         )
         .query(async ({ ctx, input }) => {
-          const studentUserId = input?.studentUserId ?? ctx.user.id;
+          const studentUserId =
+            input?.studentUserId ?? ctx.user.id;
 
-          if (studentUserId !== ctx.user.id && !isAdmin(ctx.user.role)) {
-            const child = await getActiveChild(ctx.user.id, studentUserId);
+          if (
+            studentUserId !== ctx.user.id &&
+            !isAdmin(ctx.user.role)
+          ) {
+            const child = await getActiveChild(
+              ctx.user.id,
+              studentUserId,
+            );
 
             if (!child) {
               throw new TRPCError({
@@ -230,23 +352,23 @@ export const appRouter = router({
           }),
         )
         .mutation(({ ctx, input }) => {
-          const { studentUserId = ctx.user.id, ...data } = input;
+          const {
+            studentUserId = ctx.user.id,
+            ...data
+          } = input;
+
           assertSelfOrAdmin(ctx.user, studentUserId);
-          return upsertLearningProfile(studentUserId, data);
+
+          return upsertLearningProfile(
+            studentUserId,
+            data,
+          );
         }),
     }),
 
     booking: router({
       create: protectedProcedure
-        .input(
-          z.object({
-            teacherId: z.number().int().positive(),
-            startAt: z.string().datetime(),
-            endAt: z.string().datetime(),
-            timezone: z.string().min(1).max(64).default("UTC"),
-            notes: z.string().max(5000).optional().nullable(),
-          }),
-        )
+        .input(createBookingInput)
         .mutation(async ({ ctx, input }) => {
           if (
             ctx.user.role !== "student" ||
@@ -264,6 +386,8 @@ export const appRouter = router({
             endAt: new Date(input.endAt),
             timezone: input.timezone,
             notes: input.notes ?? null,
+            subject: input.subject ?? null,
+            currency: input.currency ?? "EGP",
           });
         }),
 
@@ -282,7 +406,7 @@ export const appRouter = router({
       }),
 
       cancel: protectedProcedure
-        .input(z.object({ id: z.number().int().positive() }))
+        .input(cancellationInput)
         .mutation(async ({ ctx, input }) => {
           if (
             ctx.user.role !== "student" ||
@@ -294,7 +418,11 @@ export const appRouter = router({
             });
           }
 
-          return cancelStudentBooking(ctx.user.id, input.id);
+          return cancelStudentBooking(
+            ctx.user.id,
+            input.id,
+            input.cancellationReason ?? null,
+          );
         }),
     }),
   }),
@@ -306,10 +434,16 @@ export const appRouter = router({
       ),
 
       get: protectedProcedure
-        .input(z.object({ studentUserId: z.number().int().positive() }))
+        .input(
+          z.object({
+            studentUserId: z.number().int().positive(),
+          }),
+        )
         .query(async ({ ctx, input }) => {
           if (isAdmin(ctx.user.role)) {
-            return getStudentProfile(input.studentUserId);
+            return getStudentProfile(
+              input.studentUserId,
+            );
           }
 
           const child = await getActiveChild(
@@ -331,11 +465,15 @@ export const appRouter = router({
         .input(
           z.object({
             studentUserId: z.number().int().positive(),
-            relationshipType: z.string().max(50).default("parent"),
+            relationshipType: z
+              .string()
+              .max(50)
+              .default("parent"),
           }),
         )
         .mutation(async ({ ctx, input }) => {
-          const parentProfile = await getParentProfile(ctx.user.id);
+          const parentProfile =
+            await getParentProfile(ctx.user.id);
 
           if (
             !canCreateParentChildLink(
@@ -356,9 +494,10 @@ export const appRouter = router({
             });
           }
 
-          const studentProfile = await getStudentProfile(
-            input.studentUserId,
-          );
+          const studentProfile =
+            await getStudentProfile(
+              input.studentUserId,
+            );
 
           if (!studentProfile) {
             throw new TRPCError({
@@ -392,13 +531,17 @@ export const appRouter = router({
             });
           }
 
-          return createTeacherApplication(ctx.user.id, input);
+          return createTeacherApplication(
+            ctx.user.id,
+            input,
+          );
         }),
 
       update: protectedProcedure
         .input(teacherApplicationInput.partial())
         .mutation(async ({ ctx, input }) => {
-          const existing = await getTeacherApplication(ctx.user.id);
+          const existing =
+            await getTeacherApplication(ctx.user.id);
 
           if (!existing) {
             throw new TRPCError({
@@ -407,18 +550,24 @@ export const appRouter = router({
             });
           }
 
-          if (existing.verificationStatus === "suspended") {
+          if (
+            existing.verificationStatus === "suspended"
+          ) {
             throw new TRPCError({
               code: "FORBIDDEN",
               message: "لا يمكن تعديل طلب معلق",
             });
           }
 
-          return updateTeacherApplication(ctx.user.id, input);
+          return updateTeacherApplication(
+            ctx.user.id,
+            input,
+          );
         }),
 
       submit: protectedProcedure.mutation(async ({ ctx }) => {
-        const existing = await getTeacherApplication(ctx.user.id);
+        const existing =
+          await getTeacherApplication(ctx.user.id);
 
         if (!existing) {
           throw new TRPCError({
@@ -442,7 +591,10 @@ export const appRouter = router({
           });
         }
 
-        return submitTeacherApplication(ctx.user.id, ctx.user.id);
+        return submitTeacherApplication(
+          ctx.user.id,
+          ctx.user.id,
+        );
       }),
     }),
 
@@ -458,7 +610,9 @@ export const appRouter = router({
           });
         }
 
-        const teacher = await getTeacherForUser(ctx.user.id);
+        const teacher = await getTeacherForUser(
+          ctx.user.id,
+        );
 
         if (!teacher) {
           throw new TRPCError({
@@ -483,7 +637,9 @@ export const appRouter = router({
             });
           }
 
-          const teacher = await getTeacherForUser(ctx.user.id);
+          const teacher = await getTeacherForUser(
+            ctx.user.id,
+          );
 
           if (!teacher) {
             throw new TRPCError({
@@ -492,14 +648,21 @@ export const appRouter = router({
             });
           }
 
-          if (teacher.profile.verificationStatus !== "approved") {
+          if (
+            teacher.profile.verificationStatus !==
+            "approved"
+          ) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "يجب اعتماد حساب المعلم أولًا",
+              message:
+                "يجب اعتماد حساب المعلم أولًا",
             });
           }
 
-          return createAvailability(teacher.profile.id, input);
+          return createAvailability(
+            teacher.profile.id,
+            input,
+          );
         }),
 
       update: protectedProcedure
@@ -518,10 +681,22 @@ export const appRouter = router({
               .regex(/^\d{4}-\d{2}-\d{2}$/)
               .nullable()
               .optional(),
-            startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-            endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-            timezone: z.string().min(1).max(64).optional(),
-            status: z.enum(["active", "inactive"]).optional(),
+            startTime: z
+              .string()
+              .regex(/^\d{2}:\d{2}$/)
+              .optional(),
+            endTime: z
+              .string()
+              .regex(/^\d{2}:\d{2}$/)
+              .optional(),
+            timezone: z
+              .string()
+              .min(1)
+              .max(64)
+              .optional(),
+            status: z
+              .enum(["active", "inactive"])
+              .optional(),
           }),
         )
         .mutation(async ({ ctx, input }) => {
@@ -535,7 +710,9 @@ export const appRouter = router({
             });
           }
 
-          const teacher = await getTeacherForUser(ctx.user.id);
+          const teacher = await getTeacherForUser(
+            ctx.user.id,
+          );
 
           if (!teacher) {
             throw new TRPCError({
@@ -554,7 +731,11 @@ export const appRouter = router({
         }),
 
       delete: protectedProcedure
-        .input(z.object({ id: z.number().int().positive() }))
+        .input(
+          z.object({
+            id: z.number().int().positive(),
+          }),
+        )
         .mutation(async ({ ctx, input }) => {
           if (
             ctx.user.role !== "teacher" ||
@@ -566,7 +747,9 @@ export const appRouter = router({
             });
           }
 
-          const teacher = await getTeacherForUser(ctx.user.id);
+          const teacher = await getTeacherForUser(
+            ctx.user.id,
+          );
 
           if (!teacher) {
             throw new TRPCError({
@@ -594,7 +777,9 @@ export const appRouter = router({
           });
         }
 
-        const teacher = await getTeacherForUser(ctx.user.id);
+        const teacher = await getTeacherForUser(
+          ctx.user.id,
+        );
 
         if (!teacher) {
           throw new TRPCError({
@@ -603,11 +788,17 @@ export const appRouter = router({
           });
         }
 
-        return listTeacherBookings(teacher.profile.id);
+        return listTeacherBookings(
+          teacher.profile.id,
+        );
       }),
 
       get: protectedProcedure
-        .input(z.object({ id: z.number().int().positive() }))
+        .input(
+          z.object({
+            id: z.number().int().positive(),
+          }),
+        )
         .query(async ({ ctx, input }) => {
           if (
             ctx.user.role !== "teacher" ||
@@ -619,7 +810,9 @@ export const appRouter = router({
             });
           }
 
-          const teacher = await getTeacherForUser(ctx.user.id);
+          const teacher = await getTeacherForUser(
+            ctx.user.id,
+          );
 
           if (!teacher) {
             throw new TRPCError({
@@ -638,17 +831,7 @@ export const appRouter = router({
         }),
 
       updateStatus: protectedProcedure
-        .input(
-          z.object({
-            id: z.number().int().positive(),
-            status: z.enum([
-              "confirmed",
-              "rejected",
-              "completed",
-              "cancelled",
-            ]),
-          }),
-        )
+        .input(teacherBookingStatusInput)
         .mutation(async ({ ctx, input }) => {
           if (
             ctx.user.role !== "teacher" ||
@@ -660,7 +843,9 @@ export const appRouter = router({
             });
           }
 
-          const teacher = await getTeacherForUser(ctx.user.id);
+          const teacher = await getTeacherForUser(
+            ctx.user.id,
+          );
 
           if (!teacher) {
             throw new TRPCError({
@@ -673,6 +858,7 @@ export const appRouter = router({
             teacher.profile.id,
             input.id,
             input.status,
+            input.cancellationReason ?? null,
           );
         }),
     }),
@@ -684,7 +870,12 @@ export const appRouter = router({
         z
           .object({
             page: z.number().int().min(1).default(1),
-            pageSize: z.number().int().min(1).max(100).default(50),
+            pageSize: z
+              .number()
+              .int()
+              .min(1)
+              .max(100)
+              .default(50),
           })
           .optional(),
       )
@@ -722,20 +913,33 @@ export const appRouter = router({
     overview: privilegedProcedure.query(async () => {
       const students = await listStudentsForAdmin();
       const teachers = await listTeacherApplications();
-      return { studentCount: students.length, teacherCount: teachers.length };
+
+      return {
+        studentCount: students.length,
+        teacherCount: teachers.length,
+      };
     }),
+
     students: router({
-      list: privilegedProcedure.query(() => listStudentsForAdmin()),
+      list: privilegedProcedure.query(() =>
+        listStudentsForAdmin(),
+      ),
     }),
+
     teachers: router({
       list: privilegedProcedure.query(() =>
         listTeacherApplications(),
       ),
 
       get: privilegedProcedure
-        .input(z.object({ id: z.number().int().positive() }))
+        .input(
+          z.object({
+            id: z.number().int().positive(),
+          }),
+        )
         .query(async ({ input }) => {
-          const result = await getTeacherApplicationById(input.id);
+          const result =
+            await getTeacherApplicationById(input.id);
 
           if (!result) {
             throw new TRPCError({
@@ -748,11 +952,14 @@ export const appRouter = router({
         }),
 
       approve: privilegedProcedure
-        .input(z.object({ id: z.number().int().positive() }))
+        .input(
+          z.object({
+            id: z.number().int().positive(),
+          }),
+        )
         .mutation(async ({ ctx, input }) => {
-          const current = await getTeacherApplicationById(
-            input.id,
-          );
+          const current =
+            await getTeacherApplicationById(input.id);
 
           if (!current) {
             throw new TRPCError({
@@ -764,7 +971,8 @@ export const appRouter = router({
           if (current.user.id === ctx.user.id) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "لا يمكن اعتماد طلب الحساب الحالي",
+              message:
+                "لا يمكن اعتماد طلب الحساب الحالي",
             });
           }
 
@@ -793,13 +1001,16 @@ export const appRouter = router({
         .input(
           z.object({
             id: z.number().int().positive(),
-            rejectionReason: z.string().trim().min(1).max(2000),
+            rejectionReason: z
+              .string()
+              .trim()
+              .min(1)
+              .max(2000),
           }),
         )
         .mutation(async ({ ctx, input }) => {
-          const current = await getTeacherApplicationById(
-            input.id,
-          );
+          const current =
+            await getTeacherApplicationById(input.id);
 
           if (!current) {
             throw new TRPCError({
@@ -811,7 +1022,8 @@ export const appRouter = router({
           if (current.user.id === ctx.user.id) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "لا يمكن رفض طلب الحساب الحالي",
+              message:
+                "لا يمكن رفض طلب الحساب الحالي",
             });
           }
 
@@ -831,9 +1043,8 @@ export const appRouter = router({
           }),
         )
         .mutation(async ({ ctx, input }) => {
-          const current = await getTeacherApplicationById(
-            input.id,
-          );
+          const current =
+            await getTeacherApplicationById(input.id);
 
           if (!current) {
             throw new TRPCError({
@@ -845,7 +1056,8 @@ export const appRouter = router({
           if (current.user.id === ctx.user.id) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "لا يمكن تعليق الحساب الحالي",
+              message:
+                "لا يمكن تعليق الحساب الحالي",
             });
           }
 
@@ -863,7 +1075,10 @@ export const appRouter = router({
         .input(
           z
             .object({
-              targetUserId: z.number().int().positive(),
+              targetUserId: z
+                .number()
+                .int()
+                .positive(),
               role: z
                 .enum([
                   "user",
@@ -895,7 +1110,8 @@ export const appRouter = router({
           if (ctx.user.id === input.targetUserId) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "لا يمكن تعديل صلاحيات الحساب الحالي",
+              message:
+                "لا يمكن تعديل صلاحيات الحساب الحالي",
             });
           }
 
@@ -945,19 +1161,22 @@ export const appRouter = router({
           ) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "لا يمكن إزالة آخر super_admin",
+              message:
+                "لا يمكن إزالة آخر super_admin",
             });
           }
 
-          const existing = await updateUserAccessWithAudit(
-            input.targetUserId,
-            {
-              role: input.role,
-              accountStatus: input.accountStatus,
-            },
-            ctx.user.id,
-            input.reason,
-          );
+          const existing =
+            await updateUserAccessWithAudit(
+              input.targetUserId,
+              {
+                role: input.role,
+                accountStatus:
+                  input.accountStatus,
+              },
+              ctx.user.id,
+              input.reason,
+            );
 
           if (!existing) {
             throw new TRPCError({
@@ -1004,3 +1223,4 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
