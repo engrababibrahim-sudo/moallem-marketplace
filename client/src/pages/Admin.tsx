@@ -6,6 +6,7 @@ import {
   Search, Settings, ShieldCheck, Sparkles, UserCheck, UserRound, Users, X, XCircle
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import Finance from "./Finance";
 import { supabase } from "@/lib/supabase";
 
 const menu = [
@@ -90,7 +91,7 @@ export default function Admin(){
       </header>
 
       <main className="mx-auto max-w-[1540px] p-5 lg:p-8">
-        {location==="/admin"?<Dashboard/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:<Inactive title={title}/>}
+        {location==="/admin"?<Dashboard/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/finance"?<Finance/>:<Inactive title={title}/>}
       </main>
     </div>
   </div>;
