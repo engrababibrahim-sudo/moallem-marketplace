@@ -7,6 +7,7 @@ import { createContext } from "./_core/context";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerPaymobRoutes } from "./payments/paymob";
 import { registerLiveSessionRoutes } from "./liveSessions/providers";
+import { registerLiveSessionManagementRoutes } from "./liveSessions/routes";
 
 export function createApp() {
   const app = express();
@@ -18,6 +19,7 @@ export function createApp() {
   registerOAuthRoutes(app);
   registerPaymobRoutes(app);
   registerLiveSessionRoutes(app);
+  registerLiveSessionManagementRoutes(app);
 
   app.use(
     "/api/trpc",
