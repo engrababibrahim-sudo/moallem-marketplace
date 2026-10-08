@@ -4,7 +4,7 @@ import { GraduationCap, LogOut, Search, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
-type Teacher = { id:string; full_name:string; bio:string|null; city:string|null; years_experience:number; hourly_rate:number|null; subjects:string[] };
+type Teacher = { id:string; display_name:string|null; bio:string|null; city:string|null; years_experience:number; hourly_rate:number|null; subjects:string[] };
 
 export default function Portal() {
   const { profile, signOut } = useAuth();
@@ -15,9 +15,9 @@ export default function Portal() {
 
   useEffect(()=>{ let active=true;
     supabase.from("teacher_profiles")
-      .select("id,bio,years_experience,hourly_rate,subjects,profiles!inner(full_name,city)")
+      .select("id,display_name,bio,years_experience,hourly_rate,subjects,education_stages")
       .eq("verification_status","approved").order("created_at",{ascending:false}).limit(24)
-      .then(({data})=>{ if(!active)return; setTeachers((data??[]).map((x:any)=>({id:x.id,bio:x.bio,years_experience:x.years_experience,hourly_rate:x.hourly_rate,subjects:x.subjects??[],full_name:x.profiles?.full_name??"معلم",city:x.profiles?.city??null}))); setLoading(false);});
+      .then(({data})=>{ if(!active)return; setTeachers((data??[]).map((x:any)=>({id:x.id,bio:x.bio,years_experience:x.years_experience,hourly_rate:x.hourly_rate,subjects:x.subjects??[],full_name:x.display_name??"معلم",city:null}))); setLoading(false);});
     return()=>{active=false};
   },[]);
 
