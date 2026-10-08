@@ -15,6 +15,7 @@ import TeacherDetail from "./pages/TeacherDetail";
 import TeacherBooking from "./pages/TeacherBooking";
 import TeacherAvailabilitySupabase from "./pages/TeacherAvailabilitySupabase";
 import TeacherBookings from "./pages/TeacherBookings";
+import StudentBookings from "./pages/StudentBookings";
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/teachers/:id" component={TeacherDetail} />
               <Route path="/teacher/availability"><ProtectedRoute roles={["teacher"]}><TeacherAvailabilitySupabase /></ProtectedRoute></Route>
               <Route path="/teacher/bookings"><ProtectedRoute roles={["teacher"]}><TeacherBookings /></ProtectedRoute></Route>
+              <Route path="/student/bookings"><ProtectedRoute roles={["student"]}><StudentBookings /></ProtectedRoute></Route>
               <Route path="/portal"><ProtectedRoute><Portal /></ProtectedRoute></Route>
               <Route path="/admin"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
               <Route path="/admin/:section"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
