@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, GraduationCap, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -29,10 +29,7 @@ export default function Auth() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  if (user && !loading) {
-    navigate("/portal");
-    return null;
-  }
+  useEffect(() => { if (user && !loading) navigate("/portal"); }, [user, loading, navigate]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
