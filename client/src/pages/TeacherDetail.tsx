@@ -110,7 +110,7 @@ export default function TeacherDetail() {
             <aside className="rounded-3xl bg-[#fbf8f4] p-5">
               <p className="text-sm font-bold text-black/45">السعر بالساعة</p>
               <p className="mt-2 text-3xl font-extrabold">{teacher.hourly_rate ?? "—"} <span className="text-base">{teacher.currency}</span></p>
-              <button type="button" onClick={() => navigate(`/teachers/${teacher.id}/book`)} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#ff7a00] px-5 py-3.5 text-sm font-extrabold text-white transition hover:bg-[#e86e00]">
+              <button type="button" onClick={() => navigate(`/book/${teacher.id}`)} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#ff7a00] px-5 py-3.5 text-sm font-extrabold text-white transition hover:bg-[#e86e00]">
                 <CalendarDays className="h-4 w-4" /> اختيار موعد وحجز
               </button>
               <p className="mt-3 text-center text-xs leading-5 text-black/45">سننتقل في الخطوة التالية لاختيار الموعد وإنشاء الحجز.</p>
