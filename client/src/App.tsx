@@ -29,7 +29,7 @@ export default function App() {
               <Route path="/teachers" component={Teachers} />
               <Route path="/book/:id" component={TeacherBooking} />
               <Route path="/teachers/:id" component={TeacherDetail} />
-              <Route path="/teacher/availability" component={TeacherAvailabilitySupabase} />
+              <Route path="/teacher/availability"><ProtectedRoute roles={["teacher"]}><TeacherAvailabilitySupabase /></ProtectedRoute></Route>
               <Route path="/portal"><ProtectedRoute><Portal /></ProtectedRoute></Route>
               <Route path="/admin"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
               <Route path="/admin/:section"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
