@@ -24,27 +24,27 @@ export default function Admin(){
   const [open,setOpen]=useState(false);
   const [location]=useLocation();
   if(!profile)return null;
-  return <div dir="rtl" className="min-h-screen bg-[#f6f7f9] text-[#182431]">
-    <aside className={`fixed inset-y-0 right-0 z-40 w-72 bg-white border-l border-black/[.06] transition-transform lg:translate-x-0 ${open?"translate-x-0":"translate-x-full"}`}>
+  return <div dir="rtl" className="min-h-screen bg-[#f4f6f8] text-[#17212b]">
+    <aside className={`fixed inset-y-0 right-0 z-40 w-[278px] bg-[#111b27] text-white border-l border-white/10 shadow-2xl transition-transform lg:translate-x-0 ${open?"translate-x-0":"translate-x-full"}`}>
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b p-5">
-          <Link href="/admin" className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#182431] text-white"><GraduationCap className="h-5 w-5"/></span><div><b>مُعلّم</b><span className="block text-xs text-black/45">نظام الإدارة</span></div></Link>
+        <div className="flex items-center justify-between border-b border-white/10 p-5">
+          <Link href="/admin" className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#111b27]"><GraduationCap className="h-5 w-5"/></span><div><b>مُعلّم</b><span className="block text-xs text-white/40">نظام الإدارة</span></div></Link>
           <button className="lg:hidden" onClick={()=>setOpen(false)}><X/></button>
         </div>
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {menu.map(([label,href,Icon])=><Link key={href} href={href} onClick={()=>setOpen(false)} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-black/65 hover:bg-black/[.04]"><Icon className="h-4 w-4"/>{label}</Link>)}
+          {menu.map(([label,href,Icon])=><Link key={href} href={href} onClick={()=>setOpen(false)} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-white/60 hover:bg-white/[.06]"><Icon className="h-4 w-4"/>{label}</Link>)}
         </nav>
-        <div className="border-t p-4"><p className="text-xs text-black/45">مساحة خاصة</p><p className="truncate text-sm font-bold">{profile.email}</p><button onClick={signOut} className="mt-3 flex w-full justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold"><LogOut className="h-4 w-4"/>خروج</button></div>
+        <div className="border-t border-white/10 p-4"><p className="text-xs text-black/45">مساحة خاصة</p><p className="truncate text-sm font-bold">{profile.email}</p><button onClick={signOut} className="mt-3 flex w-full justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold"><LogOut className="h-4 w-4"/>خروج</button></div>
       </div>
     </aside>
     {open&&<button className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={()=>setOpen(false)}/>}
     <div className="min-h-screen lg:mr-72">
       <header className="flex h-16 items-center border-b bg-white px-5 lg:px-8"><button className="mr-2 rounded-xl border p-2 lg:hidden" onClick={()=>setOpen(true)}><Menu/></button><div><p className="text-xs font-bold text-[#c55d08]">لوحة الإدارة</p><h1 className="font-extrabold">نظام الإدارة</h1></div></header>
-      <main className="p-5 lg:p-8">{location === "/admin" ? <Dashboard/> : location === "/admin/teachers" ? <TeacherRequests/> : <Inactive/>}</main>
+      <main className="mx-auto max-w-[1500px] p-5 lg:p-8">{location === "/admin" ? <Dashboard/> : location === "/admin/teachers" ? <TeacherRequests/> : <Inactive/>}</main>
     </div>
   </div>;
 }
-function Card({title}:{title:string}){return <div className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm text-black/50">{title}</p><strong className="mt-2 block text-3xl">—</strong><p className="mt-2 text-xs text-black/40">سيتم ربط البيانات الفعلية في القسم.</p></div>}
+function Card({title}:{title:string}){return <div className="rounded-[22px] border border-black/[.045] bg-white p-6 shadow-sm"><p className="text-sm text-black/50">{title}</p><strong className="mt-2 block text-3xl">—</strong><p className="mt-2 text-xs text-black/40">بيانات مباشرة من قاعدة البيانات.</p></div>}
 
 function Dashboard(){
  const [s,setS]=useState({users:0,teachers:0,pending:0,bookings:0});
@@ -54,9 +54,9 @@ function Dashboard(){
   supabase.from("teacher_profiles").select("id",{count:"exact",head:true}).eq("verification_status","pending"),
   supabase.from("bookings").select("id",{count:"exact",head:true})
  ]).then(([u,t,p,b])=>setS({users:u.count??0,teachers:t.count??0,pending:p.count??0,bookings:b.count??0}));},[]);
- return <><section className="rounded-[2rem] bg-[#182431] p-8 text-white"><p className="text-sm font-bold text-[#ffb36e]">مركز الإدارة</p><h2 className="mt-2 text-3xl font-extrabold">مرحبًا بك في نظام الإدارة</h2><p className="mt-3 text-sm text-white/60">إدارة المنصة من مكان واحد.</p></section>
- <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["المستخدمون",s.users],["المعلمون",s.teachers],["طلبات المراجعة",s.pending],["الحجوزات",s.bookings]].map(([l,v])=><div key={String(l)} className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm text-black/50">{l}</p><strong className="mt-2 block text-3xl">{v}</strong><p className="mt-2 text-xs text-black/40">بيانات مباشرة من قاعدة البيانات.</p></div>)}</div>
- <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm"><h2 className="font-extrabold">طلبات المعلمين</h2><p className="mt-2 text-sm text-black/50">لديك {s.pending} طلبات قيد المراجعة.</p><Link href="/admin/teachers" className="mt-4 inline-flex rounded-full bg-[#182431] px-5 py-3 text-sm font-bold text-white">فتح طلبات المعلمين</Link></div></>;
+ return <><section className="relative overflow-hidden rounded-[28px] bg-[#111b27] p-8 text-white shadow-xl shadow-black/5"><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[.06] px-3 py-1.5 text-[11px] font-bold text-white/70">✦ مركز التحكم الرئيسي</div><h2 className="mt-2 text-3xl font-black tracking-tight lg:text-4xl">أهلًا بك في لوحة الإدارة</h2><p className="mt-3 text-sm text-white/60">من هنا تتابع المعلمين والمستخدمين والحجوزات وكل عمليات منصة مُعلّم.</p></section>
+ <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[["المستخدمون",s.users],["المعلمون",s.teachers],["طلبات المراجعة",s.pending],["الحجوزات",s.bookings]].map(([l,v])=><div key={String(l)} className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-sm text-black/50">{l}</p><strong className="mt-2 block text-3xl">{v}</strong><p className="mt-2 text-xs text-black/40">بيانات مباشرة من قاعدة البيانات.</p></div>)}</div>
+ <div className="mt-6 rounded-[24px] border border-black/[.045] bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="font-extrabold">طلبات المعلمين</h2></div><span className="rounded-full bg-[#fff0e2] px-3 py-1 text-xs font-bold text-[#c55d08]">{s.pending} قيد المراجعة</span></div><p className="mt-4 text-sm text-black/50">راجع الطلبات واعتمد المعلمين ليظهروا في السوق.</p><Link href="/admin/teachers" className="mt-4 inline-flex rounded-full bg-[#111b27] px-5 py-3 text-sm font-bold text-white">فتح طلبات المعلمين</Link></div></>;
 }
 function TeacherRequests(){
  const [items,setItems]=useState<any[]>([]); const [selected,setSelected]=useState<any|null>(null); const [reason,setReason]=useState(""); const [busy,setBusy]=useState(false);
