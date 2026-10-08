@@ -44,7 +44,7 @@ export default function TeacherRegisterSupabase(){
     e.preventDefault(); setError(""); setMessage(""); setStatus("saving");
     const {error:profileError}=await supabase.from("profiles").update({full_name:form.full_name.trim(),phone:form.phone.trim()||null,city:form.city.trim()||null}).eq("id",user.id);
     if(profileError){setError(profileError.message);setStatus("idle");return;}
-    const payload={id:user.id,bio:form.bio.trim()||null,qualification:form.qualification.trim()||null,specialization:form.specialization.trim()||null,years_experience:Math.max(0,Number(form.years_experience)||0),subjects:form.subjects.split(",").map(x=>x.trim()).filter(Boolean),education_stages:form.education_stages.split(",").map(x=>x.trim()).filter(Boolean),grades:form.grades.split(",").map(x=>x.trim()).filter(Boolean),teaching_format:form.teaching_format.trim()||null,hourly_rate:form.hourly_rate?Number(form.hourly_rate):null};
+    const payload={id:user.id,display_name:form.full_name.trim()||null,bio:form.bio.trim()||null,qualification:form.qualification.trim()||null,specialization:form.specialization.trim()||null,years_experience:Math.max(0,Number(form.years_experience)||0),subjects:form.subjects.split(",").map(x=>x.trim()).filter(Boolean),education_stages:form.education_stages.split(",").map(x=>x.trim()).filter(Boolean),grades:form.grades.split(",").map(x=>x.trim()).filter(Boolean),teaching_format:form.teaching_format.trim()||null,hourly_rate:form.hourly_rate?Number(form.hourly_rate):null};
     const {error:teacherError}=await supabase.from("teacher_profiles").upsert(payload);
     if(teacherError){setError(teacherError.message);setStatus("idle");return;}
     setMessage("تم حفظ الملف بنجاح.");
