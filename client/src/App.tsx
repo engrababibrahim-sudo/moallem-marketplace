@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Portal from "./pages/Portal";
 import TeacherRegister from "./pages/TeacherRegisterSupabase";
+import Teachers from "./pages/Teachers";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
               <Route path="/" component={Home} />
               <Route path="/auth" component={Auth} />
               <Route path="/teacher/register" component={TeacherRegister} />
+              <Route path="/teachers" component={Teachers} />
               <Route path="/portal">
                 <ProtectedRoute><Portal /></ProtectedRoute>
               </Route>
