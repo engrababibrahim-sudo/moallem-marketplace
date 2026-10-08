@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, CalendarDays, Clock3, GraduationCap, LogOut, XCircle } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock3, CreditCard, GraduationCap, LogOut, XCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
