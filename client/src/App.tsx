@@ -16,6 +16,7 @@ import TeacherBooking from "./pages/TeacherBooking";
 import TeacherAvailabilitySupabase from "./pages/TeacherAvailabilitySupabase";
 import TeacherBookings from "./pages/TeacherBookings";
 import StudentBookings from "./pages/StudentBookings";
+import PaymentResult from "./pages/PaymentResult";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/teacher/availability"><ProtectedRoute roles={["teacher"]}><TeacherAvailabilitySupabase /></ProtectedRoute></Route>
               <Route path="/teacher/bookings"><ProtectedRoute roles={["teacher"]}><TeacherBookings /></ProtectedRoute></Route>
               <Route path="/student/bookings"><ProtectedRoute roles={["student"]}><StudentBookings /></ProtectedRoute></Route>
+              <Route path="/payment/result"><ProtectedRoute roles={["student"]}><PaymentResult /></ProtectedRoute></Route>
               <Route path="/portal"><ProtectedRoute><Portal /></ProtectedRoute></Route>
               <Route path="/admin"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
               <Route path="/admin/:section"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
