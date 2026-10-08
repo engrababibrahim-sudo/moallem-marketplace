@@ -20,7 +20,6 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 
 type Onboarding = {
   role: string;
