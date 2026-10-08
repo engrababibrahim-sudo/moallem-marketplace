@@ -12,6 +12,7 @@ import Admin from "./pages/Admin";
 import TeacherRegister from "./pages/TeacherRegisterSupabase";
 import Teachers from "./pages/Teachers";
 import TeacherDetail from "./pages/TeacherDetail";
+import TeacherBooking from "./pages/TeacherBooking";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/auth" component={Auth} />
               <Route path="/teacher/register" component={TeacherRegister} />
               <Route path="/teachers" component={Teachers} />
+              <Route path="/teachers/:id/book" component={TeacherBooking} />
               <Route path="/teachers/:id" component={TeacherDetail} />
               <Route path="/portal">
                 <ProtectedRoute><Portal /></ProtectedRoute>
