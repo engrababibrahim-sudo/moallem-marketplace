@@ -26,7 +26,7 @@ export default function App() {
               <Route path="/auth" component={Auth} />
               <Route path="/teacher/register" component={TeacherRegister} />
               <Route path="/teachers" component={Teachers} />
-              <Route path="/teachers/:id/book" component={TeacherBooking} />
+              <Route path="/book/:id" component={TeacherBooking} />
               <Route path="/teachers/:id" component={TeacherDetail} />
               <Route path="/portal">
                 <ProtectedRoute><Portal /></ProtectedRoute>
