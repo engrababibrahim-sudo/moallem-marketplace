@@ -6,6 +6,7 @@ import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerPaymobRoutes } from "./payments/paymob";
+import { registerLiveSessionRoutes } from "./liveSessions/providers";
 
 export function createApp() {
   const app = express();
@@ -16,6 +17,7 @@ export function createApp() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerPaymobRoutes(app);
+  registerLiveSessionRoutes(app);
 
   app.use(
     "/api/trpc",
