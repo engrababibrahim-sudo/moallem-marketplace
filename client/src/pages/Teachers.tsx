@@ -29,6 +29,8 @@ export default function Teachers() {
   const [subject, setSubject] = useState("");
   const [stage, setStage] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [currency, setCurrency] = useState("");
+  const [country, setCountry] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -37,6 +39,8 @@ export default function Teachers() {
     const price = params.get("price") || "";
     setMaxPrice(price);
     setQuery(params.get("q") || "");
+    setCurrency(params.get("currency") || "");
+    setCountry(params.get("country") || "");
 
     let active = true;
     supabase
@@ -77,10 +81,12 @@ export default function Teachers() {
         teacher.education_stages?.some((item) => item.includes(stage)) ||
         teacher.grades?.some((item) => item.includes(stage));
       const matchesPrice = price === null || teacher.hourly_rate === null || teacher.hourly_rate <= price;
+      const matchesCurrency = !currency || teacher.currency === currency;
+      const matchesCountry = !country || teacher.country === country;
 
-      return matchesQuery && matchesSubject && matchesStage && matchesPrice;
+      return matchesQuery && matchesSubject && matchesStage && matchesPrice && matchesCurrency && matchesCountry;
     });
-  }, [teachers, query, subject, stage, maxPrice]);
+  }, [teachers, query, subject, stage, maxPrice, currency, country]);
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#fbf8f4] text-[#182431]">
@@ -109,7 +115,7 @@ export default function Teachers() {
           </p>
         </div>
 
-        <div className="mt-6 grid gap-3 rounded-3xl bg-white p-4 shadow-sm md:grid-cols-4">
+        <div className="mt-6 grid gap-3 rounded-3xl bg-white p-4 shadow-sm md:grid-cols-6">
           <label className="rounded-2xl bg-[#f7f3ee] px-4 py-3">
             <span className="block text-[10px] font-bold text-black/45">بحث</span>
             <div className="mt-1 flex items-center gap-2">
@@ -119,7 +125,9 @@ export default function Teachers() {
           </label>
           <Select label="المادة" value={subject} onChange={setSubject} options={subjects} placeholder="كل المواد" />
           <Select label="المرحلة" value={stage} onChange={setStage} options={stages} placeholder="كل المراحل" />
-          <Select label="السعر" value={maxPrice} onChange={setMaxPrice} options={["300", "500", "700"]} labels={["حتى ٣٠٠ ج.م", "حتى ٥٠٠ ج.م", "حتى ٧٠٠ ج.م"]} placeholder="كل الأسعار" />
+          <Select label="السعر" value={maxPrice} onChange={setMaxPrice} options={["300", "500", "700"]} labels={["حتى ٣٠٠", "حتى ٥٠٠", "حتى ٧٠٠"]} placeholder="كل الأسعار" />
+          <Select label="العملة" value={currency} onChange={setCurrency} options={["EGP","SAR","AED","KWD","QAR","BHD","OMR","USD","EUR","GBP","CAD","AUD","TRY","JOD","MAD","DZD","TND"]} placeholder="كل العملات" />
+          <Select label="الدولة" value={country} onChange={setCountry} options={["مصر","السعودية","الإمارات","الكويت","قطر","البحرين","عُمان","الأردن","المغرب","الجزائر","تونس","الولايات المتحدة","المملكة المتحدة","كندا","أستراليا","تركيا"]} placeholder="كل الدول" />
         </div>
 
         {loading ? (
