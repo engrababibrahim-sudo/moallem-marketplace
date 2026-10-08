@@ -9,7 +9,7 @@ type Availability={id:string;day_of_week:number|null;specific_date:string|null;s
 type Slot=Availability&{date:string;start:string;end:string};
 
 export default function TeacherBooking(){
-  const [,params]=useRoute("/teachers/:id/book"); const [,navigate]=useLocation(); const {profile}=useAuth();
+  const [,params]=useRoute("/book/:id"); const [,navigate]=useLocation(); const {profile}=useAuth();
   const teacherId=params?.id||""; const [teacher,setTeacher]=useState<Teacher|null>(null); const [availability,setAvailability]=useState<Availability[]>([]);
   const [selected,setSelected]=useState<Slot|null>(null); const [subject,setSubject]=useState(""); const [notes,setNotes]=useState("");
   const [loading,setLoading]=useState(true); const [busy,setBusy]=useState(false); const [message,setMessage]=useState("");
