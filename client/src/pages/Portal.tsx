@@ -30,7 +30,7 @@ export default function Portal() {
   return <div dir="rtl" className="min-h-screen bg-[#fbf8f4] text-[#182431]">
     <header className="sticky top-0 z-20 border-b border-black/[.06] bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-10">
       <Link href="/" className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#182431] text-white"><GraduationCap className="h-5 w-5"/></span><b>مُعلّم</b></Link>
-      <div className="hidden md:block text-sm text-black/55">{profile.full_name||profile.email}</div>
+      <div className="flex items-center gap-2"><div className="hidden md:block text-sm text-black/55">{profile.full_name||profile.email}</div>{profile.role==="student"&&<Link href="/student/bookings" className="rounded-full border border-black/10 px-4 py-2 text-xs font-bold">حجوزاتي</Link>}</div>
       <button onClick={logout} className="inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-xs font-bold"><LogOut className="h-4 w-4"/> خروج</button>
     </div></header>
     <main className="mx-auto max-w-7xl px-5 py-8 lg:px-10 lg:py-12">
