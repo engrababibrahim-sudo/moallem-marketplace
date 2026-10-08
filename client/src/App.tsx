@@ -13,6 +13,7 @@ import TeacherRegister from "./pages/TeacherRegisterSupabase";
 import Teachers from "./pages/Teachers";
 import TeacherDetail from "./pages/TeacherDetail";
 import TeacherBooking from "./pages/TeacherBooking";
+import TeacherAvailabilitySupabase from "./pages/TeacherAvailabilitySupabase";
 
 export default function App() {
   return (
@@ -28,15 +29,10 @@ export default function App() {
               <Route path="/teachers" component={Teachers} />
               <Route path="/book/:id" component={TeacherBooking} />
               <Route path="/teachers/:id" component={TeacherDetail} />
-              <Route path="/portal">
-                <ProtectedRoute><Portal /></ProtectedRoute>
-              </Route>
-              <Route path="/admin">
-                <ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute>
-              </Route>
-              <Route path="/admin/:section">
-                <ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute>
-              </Route>
+              <Route path="/teacher/availability" component={TeacherAvailabilitySupabase} />
+              <Route path="/portal"><ProtectedRoute><Portal /></ProtectedRoute></Route>
+              <Route path="/admin"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
+              <Route path="/admin/:section"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
               <Route component={Home} />
             </Switch>
           </AuthProvider>
