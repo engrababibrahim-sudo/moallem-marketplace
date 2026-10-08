@@ -1,388 +1,45 @@
-import { useMemo } from "react";
-import {
-  CalendarDays,
-  Clock3,
-  UserRound,
-  XCircle,
-  BookOpen,
-  Wallet,
-} from "lucide-react";
-import { Link } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { useEffect, useState } from "react";
+import { ArrowRight, CalendarDays, Clock3, GraduationCap, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 
-function formatDate(value: string | Date) {
-  const date = new Date(value);
+type Booking = { id:string; teacher_id:string; subject:string; start_at:string; end_at:string; timezone:string; total_price:number|null; currency:string; status:string; payment_status:string; notes:string|null };
+type Teacher = { id:string; display_name:string|null; country:string|null };
 
-  return new Intl.DateTimeFormat("ar-EG", {
-    dateStyle: "full",
-    timeStyle: "short",
-  }).format(date);
-}
+const statuses:Record<string,string>={pending:"في انتظار تأكيد المعلم",confirmed:"مؤكد",cancelled:"ملغي",completed:"مكتمل",rejected:"مرفوض"};
+const payments:Record<string,string>={unpaid:"غير مدفوع حاليًا",pending:"الدفع قيد الانتظار",paid:"تم الدفع",failed:"فشل الدفع",refunded:"تم رد المبلغ"};
 
-function formatTime(value: string | Date) {
-  return new Intl.DateTimeFormat("ar-EG", {
-    timeStyle: "short",
-  }).format(new Date(value));
-}
+function dateText(v:string,tz:string){return new Intl.DateTimeFormat("ar-EG",{timeZone:tz||"Africa/Cairo",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date(v));}
+function timeText(v:string,tz:string){return new Intl.DateTimeFormat("ar-EG",{timeZone:tz||"Africa/Cairo",hour:"2-digit",minute:"2-digit"}).format(new Date(v));}
+function statusClass(s:string){return s==="confirmed"||s==="completed"?"bg-emerald-50 text-emerald-700":s==="rejected"||s==="cancelled"?"bg-red-50 text-red-700":"bg-amber-50 text-amber-700";}
 
-function formatPrice(
-  value: number | null | undefined,
-  currency: string | null | undefined,
-) {
-  const amount = Number(value ?? 0);
-
-  return new Intl.NumberFormat("ar-EG", {
-    style: "currency",
-    currency: currency || "EGP",
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-function statusLabel(status: string) {
-  const labels: Record<string, string> = {
-    pending: "في انتظار تأكيد المعلم",
-    confirmed: "مؤكد",
-    cancelled: "ملغي",
-    completed: "مكتمل",
-    rejected: "مرفوض",
-  };
-
-  return labels[status] ?? status;
-}
-
-function paymentStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    unpaid: "في انتظار الدفع",
-    pending: "جاري الدفع",
-    paid: "تم الدفع",
-    failed: "فشل الدفع",
-    refunded: "تم رد المبلغ",
-  };
-
-  return labels[status] ?? status;
-}
-
-function paymentStatusClass(status: string) {
-  switch (status) {
-    case "paid":
-      return "bg-[#e8f7ed] text-[#237a3b]";
-
-    case "pending":
-      return "bg-[#fff4df] text-[#8a5a00]";
-
-    case "refunded":
-      return "bg-[#eef1f5] text-[#536273]";
-
-    case "failed":
-      return "bg-[#fce8e8] text-[#a33]";
-
-    default:
-      return "bg-[#fff4df] text-[#8a5a00]";
-  }
-}
-
-function bookingStatusClass(status: string) {
-  switch (status) {
-    case "confirmed":
-      return "bg-[#fff0e2] text-[#ff7a00]";
-
-    case "pending":
-      return "bg-[#fff4df] text-[#8a5a00]";
-
-    case "completed":
-      return "bg-[#eaf0ff] text-[#3156a3]";
-
-    default:
-      return "bg-[#f4e7e7] text-[#a33]";
-  }
-}
-
-export default function StudentBookings() {
-  const bookings = trpc.student.booking.list.useQuery();
-
-  const cancelBooking = trpc.student.booking.cancel.useMutation({
-    onSuccess: () => {
-      bookings.refetch();
-    },
-  });
-
-  const rows = useMemo(
-    () => bookings.data ?? [],
-    [bookings.data],
-  );
-
-  const handleCancel = async (id: number) => {
-    const confirmed = window.confirm(
-      "هل أنتِ متأكدة من إلغاء هذا الحجز؟",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const reason = window.prompt(
-      "يمكنك كتابة سبب الإلغاء (اختياري):",
-    );
-
-    await cancelBooking.mutateAsync({
-      id,
-      reason: reason?.trim() || null,
-    });
-  };
-
-  return (
-    <div
-      dir="rtl"
-      className="min-h-screen bg-[#fbf8f4] text-[#182431]"
-    >
-      <header className="border-b border-[#182431]/10 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-          <div>
-            <p className="text-sm font-bold text-[#ff7a00]">
-              مُعلّم
-            </p>
-
-            <h1 className="mt-1 text-2xl font-bold">
-              حجوزاتي
-            </h1>
-          </div>
-
-          <Link
-            href="/teachers"
-            className="rounded-full bg-[#182431] px-5 py-3 text-sm font-bold text-white"
-          >
-            البحث عن معلم
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-5 py-8">
-        {bookings.isLoading && (
-          <div className="rounded-3xl bg-white p-10 text-center">
-            <p className="font-semibold">
-              جاري تحميل الحجوزات...
-            </p>
-          </div>
-        )}
-
-        {bookings.isError && (
-          <div className="rounded-3xl bg-white p-10 text-center">
-            <p className="font-bold text-red-600">
-              تعذر تحميل الحجوزات
-            </p>
-
-            <button
-              type="button"
-              onClick={() => bookings.refetch()}
-              className="mt-5 rounded-full bg-[#ff7a00] px-5 py-3 font-bold text-white"
-            >
-              إعادة المحاولة
-            </button>
-          </div>
-        )}
-
-        {!bookings.isLoading &&
-          !bookings.isError &&
-          rows.length === 0 && (
-            <div className="rounded-3xl bg-white p-12 text-center">
-              <CalendarDays className="mx-auto h-12 w-12 text-[#ff7a00]" />
-
-              <h2 className="mt-5 text-xl font-bold">
-                لا توجد حجوزات حتى الآن
-              </h2>
-
-              <p className="mt-2 text-sm text-[#182431]/55">
-                ابدئي باختيار المعلم المناسب واحجزي موعد الدرس.
-              </p>
-
-              <Link
-                href="/teachers"
-                className="mt-6 inline-flex rounded-full bg-[#ff7a00] px-6 py-3 font-bold text-white"
-              >
-                استعرض المعلمين
-              </Link>
-            </div>
-          )}
-
-        {!bookings.isLoading &&
-          !bookings.isError &&
-          rows.length > 0 && (
-            <div className="space-y-4">
-              {rows.map(({ booking, teacher }) => {
-                const canCancel =
-                  booking.status === "pending" ||
-                  booking.status === "confirmed";
-
-                return (
-                  <article
-                    key={booking.id}
-                    className="rounded-3xl bg-white p-6 shadow-sm"
-                  >
-                    <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                      <div className="min-w-0 flex-1">
-                        {/* Teacher */}
-                        <div className="flex items-center gap-2">
-                          <UserRound className="h-5 w-5 text-[#ff7a00]" />
-
-                          <h2 className="text-xl font-bold">
-                            {teacher.fullName}
-                          </h2>
-                        </div>
-
-                        {/* Booking information */}
-                        <div className="mt-5 grid gap-3 text-sm text-[#182431]/70 sm:grid-cols-2">
-                          {/* Subject */}
-                          {booking.subject && (
-                            <div className="flex items-center gap-2">
-                              <BookOpen className="h-4 w-4 shrink-0 text-[#ff7a00]" />
-
-                              <span>
-                                المادة:{" "}
-                                <strong className="text-[#182431]">
-                                  {booking.subject}
-                                </strong>
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Date */}
-                          <div className="flex items-start gap-2">
-                            <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#ff7a00]" />
-
-                            <span>
-                              {formatDate(
-                                booking.startAt,
-                              )}
-                            </span>
-                          </div>
-
-                          {/* Time */}
-                          <div className="flex items-center gap-2">
-                            <Clock3 className="h-4 w-4 shrink-0 text-[#ff7a00]" />
-
-                            <span>
-                              من{" "}
-                              {formatTime(
-                                booking.startAt,
-                              )}{" "}
-                              إلى{" "}
-                              {formatTime(
-                                booking.endAt,
-                              )}
-                            </span>
-                          </div>
-
-                          {/* Duration */}
-                          {booking.durationMinutes && (
-                            <div className="flex items-center gap-2">
-                              <Clock3 className="h-4 w-4 shrink-0 text-[#ff7a00]" />
-
-                              <span>
-                                مدة الدرس:{" "}
-                                <strong className="text-[#182431]">
-                                  {booking.durationMinutes} دقيقة
-                                </strong>
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Price */}
-                          {booking.totalPrice !== null &&
-                            booking.totalPrice !== undefined && (
-                              <div className="flex items-center gap-2">
-                                <Wallet className="h-4 w-4 shrink-0 text-[#ff7a00]" />
-
-                                <span>
-                                  السعر:{" "}
-                                  <strong className="text-[#182431]">
-                                    {formatPrice(
-                                      booking.totalPrice,
-                                      booking.currency,
-                                    )}
-                                  </strong>
-                                </span>
-                              </div>
-                            )}
-                        </div>
-
-                        {/* Notes */}
-                        {booking.notes && (
-                          <div className="mt-4 rounded-2xl bg-[#fbf8f4] p-4 text-sm leading-6 text-[#182431]/70">
-                            <span className="font-bold text-[#182431]">
-                              ملاحظات:
-                            </span>{" "}
-                            {booking.notes}
-                          </div>
-                        )}
-
-                        {/* Cancellation reason */}
-                        {booking.status ===
-                          "cancelled" &&
-                          booking.cancellationReason && (
-                            <div className="mt-4 rounded-2xl bg-[#fce8e8] p-4 text-sm leading-6 text-[#8f3030]">
-                              <span className="font-bold">
-                                سبب الإلغاء:
-                              </span>{" "}
-                              {booking.cancellationReason}
-                            </div>
-                          )}
-                      </div>
-
-                      {/* Status / Actions */}
-                      <div className="flex shrink-0 flex-col items-start gap-3 md:items-end">
-                        {/* Booking status */}
-                        <span
-                          className={`rounded-full px-4 py-2 text-xs font-bold ${bookingStatusClass(
-                            booking.status,
-                          )}`}
-                        >
-                          {statusLabel(
-                            booking.status,
-                          )}
-                        </span>
-
-                        {/* Payment status */}
-                        {booking.paymentStatus && (
-                          <span
-                            className={`rounded-full px-4 py-2 text-xs font-bold ${paymentStatusClass(
-                              booking.paymentStatus,
-                            )}`}
-                          >
-                            {paymentStatusLabel(
-                              booking.paymentStatus,
-                            )}
-                          </span>
-                        )}
-
-                        {/* Cancel */}
-                        {canCancel && (
-                          <button
-                            type="button"
-                            disabled={
-                              cancelBooking.isPending
-                            }
-                            onClick={() =>
-                              handleCancel(
-                                booking.id,
-                              )
-                            }
-                            className="flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <XCircle className="h-4 w-4" />
-
-                            {cancelBooking.isPending
-                              ? "جاري الإلغاء..."
-                              : "إلغاء الحجز"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-      </main>
-    </div>
-  );
+export default function StudentBookings(){
+  const {profile,signOut}=useAuth(); const [,navigate]=useLocation();
+  const [bookings,setBookings]=useState<Booking[]>([]); const [teachers,setTeachers]=useState<Record<string,Teacher>>({});
+  const [loading,setLoading]=useState(true); const [error,setError]=useState("");
+  useEffect(()=>{if(!profile)return; let active=true;
+    (async()=>{setLoading(true); setError("");
+      const {data,error:e}=await supabase.from("bookings").select("id,teacher_id,subject,start_at,end_at,timezone,total_price,currency,status,payment_status,notes").eq("student_id",profile.id).order("start_at",{ascending:false});
+      if(e){if(active){setError("تعذر تحميل الحجوزات حاليًا.");setLoading(false);}return;}
+      const rows=(data??[]) as Booking[]; const ids=[...new Set(rows.map(x=>x.teacher_id))]; let map:Record<string,Teacher>={};
+      if(ids.length){const {data:td}=await supabase.from("public_teacher_directory").select("id,display_name,country").in("id",ids); map=Object.fromEntries(((td??[]) as Teacher[]).map(x=>[x.id,x]));}
+      if(active){setBookings(rows);setTeachers(map);setLoading(false);}
+    })(); return()=>{active=false};
+  },[profile]);
+  if(!profile)return null;
+  async function logout(){await signOut();navigate("/");}
+  return <div dir="rtl" className="min-h-screen bg-[#fbf8f4] text-[#182431]">
+    <header className="sticky top-0 z-20 border-b border-black/[.06] bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 lg:px-10">
+      <Link href="/portal" className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#182431] text-white"><GraduationCap className="h-5 w-5"/></span><b>مُعلّم</b></Link>
+      <div className="flex items-center gap-3"><span className="hidden text-sm text-black/55 sm:block">{profile.full_name||profile.email}</span><button onClick={logout} className="inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-xs font-bold"><LogOut className="h-4 w-4"/> خروج</button></div>
+    </div></header>
+    <main className="mx-auto max-w-5xl px-5 py-8 lg:px-10"><Link href="/portal" className="inline-flex items-center gap-2 text-sm font-bold text-black/55"><ArrowRight className="h-4 w-4"/> العودة لمساحة التعلم</Link>
+      <section className="mt-5 rounded-[2rem] bg-[#182431] p-7 text-white lg:p-10"><p className="text-sm font-bold text-[#ffb36e]">مساحة التعلم</p><h1 className="mt-2 text-3xl font-extrabold">حجوزاتي</h1><p className="mt-3 text-sm leading-7 text-white/60">جميع حصصك وحالات الحجز والدفع.</p></section>
+      {loading?<div className="py-16 text-center text-sm text-black/45">جارٍ تحميل الحجوزات...</div>:error?<div className="mt-6 rounded-3xl bg-white p-8 text-center font-bold text-red-600">{error}</div>:bookings.length===0?<div className="mt-6 rounded-3xl bg-white p-10 text-center shadow-sm"><CalendarDays className="mx-auto h-10 w-10 text-black/20"/><h2 className="mt-4 text-xl font-extrabold">لا توجد حجوزات بعد</h2><p className="mt-2 text-sm text-black/50">اختر معلمًا معتمدًا وابدأ بحجز أول حصة.</p><Link href="/teachers" className="mt-5 inline-flex rounded-full bg-[#182431] px-6 py-3 text-sm font-bold text-white">تصفح المعلمين</Link></div>:
+      <section className="mt-6 grid gap-4">{bookings.map(b=>{const t=teachers[b.teacher_id];return <article key={b.id} className="rounded-3xl bg-white p-6 shadow-sm"><div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-extrabold">{t?.display_name||"المعلم"}</h2><span className={"rounded-full px-3 py-1 text-xs font-bold "+statusClass(b.status)}>{statuses[b.status]||b.status}</span></div><p className="mt-2 text-sm text-black/50">{b.subject}{t?.country?" · "+t.country:""}</p></div><div className="rounded-2xl bg-[#fbf8f4] px-5 py-4 text-center"><b className="block text-lg">{b.total_price??"—"} {b.currency}</b><span className="text-xs text-black/45">قيمة الحجز</span></div></div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl bg-[#fbf8f4] p-4"><div className="flex items-center gap-2 text-xs text-black/45"><CalendarDays className="h-4 w-4"/> التاريخ</div><b className="mt-2 block text-sm">{dateText(b.start_at,b.timezone)}</b></div><div className="rounded-2xl bg-[#fbf8f4] p-4"><div className="flex items-center gap-2 text-xs text-black/45"><Clock3 className="h-4 w-4"/> الوقت</div><b className="mt-2 block text-sm">{timeText(b.start_at,b.timezone)} - {timeText(b.end_at,b.timezone)}</b><span className="mt-1 block text-xs text-black/40">{b.timezone}</span></div></div>
+        <div className="mt-3 rounded-2xl bg-[#fbf8f4] p-4"><span className="text-xs text-black/45">حالة الدفع</span><b className="mt-1 block text-sm">{payments[b.payment_status]||b.payment_status}</b></div>{b.notes&&<div className="mt-3 rounded-2xl border border-black/5 p-4"><span className="text-xs text-black/45">ملاحظتك</span><p className="mt-1 text-sm leading-6">{b.notes}</p></div>}</article>})}</section>}
+    </main>
+  </div>;
 }
