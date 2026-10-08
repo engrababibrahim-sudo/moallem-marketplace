@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/SupabaseRoute";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Portal from "./pages/Portal";
+import Admin from "./pages/Admin";
 import TeacherRegister from "./pages/TeacherRegisterSupabase";
 import Teachers from "./pages/Teachers";
 
@@ -27,7 +28,10 @@ export default function App() {
                 <ProtectedRoute><Portal /></ProtectedRoute>
               </Route>
               <Route path="/admin">
-                <ProtectedRoute roles={["admin", "super_admin", "support"]}><Portal /></ProtectedRoute>
+                <ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute>
+              </Route>
+              <Route path="/admin/:section">
+                <ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute>
               </Route>
               <Route component={Home} />
             </Switch>
