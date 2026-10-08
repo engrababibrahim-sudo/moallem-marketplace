@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 
 type Teacher = {
   id: string;
+  country: string | null;
   display_name: string | null;
   bio: string | null;
   specialization: string | null;
@@ -14,6 +15,7 @@ type Teacher = {
   grades: string[];
   teaching_format: string | null;
   hourly_rate: number | null;
+  currency: string;
 };
 
 const stages = ["ابتدائي", "إعدادي", "ثانوي", "جامعي"];
@@ -39,7 +41,7 @@ export default function Teachers() {
     let active = true;
     supabase
       .from("public_teacher_directory")
-      .select("id,display_name,bio,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate")
+      .select("id,display_name,country,bio,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate,currency")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (!active) return;
@@ -163,7 +165,7 @@ function TeacherCard({ teacher }: { teacher: Teacher }) {
         <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#fff0e2] font-extrabold text-[#c55d08]">{initials}</span>
         <div className="min-w-0">
           <h2 className="truncate font-extrabold">{teacher.display_name || "معلم معتمد"}</h2>
-          <p className="mt-1 text-xs text-black/50">{teacher.subjects?.join(" · ") || "مواد تعليمية"}</p>
+          <p className="mt-1 text-xs text-black/50">{teacher.subjects?.join(" · ") || "مواد تعليمية"}</p>{teacher.country && <p className="mt-1 text-xs text-black/40">{teacher.country}</p>}
           {teacher.specialization && <p className="mt-1 text-xs text-black/40">{teacher.specialization}</p>}
         </div>
         <span className="mr-auto rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">معتمد</span>
@@ -171,7 +173,7 @@ function TeacherCard({ teacher }: { teacher: Teacher }) {
       <p className="mt-5 min-h-12 text-sm leading-6 text-black/55">{teacher.bio || "معلم معتمد على منصة مُعلّم."}</p>
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
         <span className="rounded-xl bg-[#fbf8f4] p-3"><b>{teacher.years_experience}</b> سنوات خبرة</span>
-        <span className="rounded-xl bg-[#fbf8f4] p-3"><b>{teacher.hourly_rate ?? "—"}</b> ج.م / ساعة</span>
+        <span className="rounded-xl bg-[#fbf8f4] p-3"><b>{teacher.hourly_rate ?? "—"}</b> {teacher.currency} / ساعة</span>
       </div>
       <Link href={"/teachers/" + teacher.id} className="mt-4 block w-full rounded-full bg-[#182431] py-3 text-center text-sm font-bold text-white">
         عرض الملف
