@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/SupabaseRoute";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Portal from "./pages/Portal";
+import TeacherRegister from "./pages/TeacherRegisterSupabase";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/auth" component={Auth} />
+              <Route path="/teacher/register" component={TeacherRegister} />
               <Route path="/portal">
                 <ProtectedRoute><Portal /></ProtectedRoute>
               </Route>
