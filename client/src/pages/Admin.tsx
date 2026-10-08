@@ -183,7 +183,7 @@ function Dashboard(){
           <Donut data={rolePercent}/>
           <div className="flex-1 space-y-3">{rolePercent.map(x=><div key={x.label} className="flex items-center justify-between gap-3"><span className="flex items-center gap-2 text-xs font-bold text-[#52657d]"><i className="h-2.5 w-2.5 rounded-full" style={{background:x.color}}/>{x.label}</span><b className="text-xs">{x.pct}%</b></div>)}</div>
         </div>
-        <p className="mt-5 text-center text-[10px] text-[#9aabc0]">{s.users.toLocaleString()} إجمالي المستخدمين</p>
+        <p className="mt-5 text-center text-[10px] text-[#9aabc0]">{Number(s.users ?? 0).toLocaleString()} إجمالي المستخدمين</p>
       </section>
     </div>
 
@@ -217,7 +217,7 @@ function Dashboard(){
 
 function StatCard({label,value,compare,icon:Icon,tone,loading}:{label:string;value:number;compare:string;icon:any;tone:"blue"|"green"|"orange"|"purple";loading:boolean}){
  const styles={blue:["#eaf4ff","#2d7ff9"],green:["#eafff5","#18a86b"],orange:["#fff4df","#f59e0b"],purple:["#f2edff","#8b5cf6"]}[tone];
- return <div className="group rounded-[22px] border border-[#dfe8f2] bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"><div className="flex items-start justify-between"><span className="grid h-12 w-12 place-items-center rounded-2xl" style={{background:styles[0]}}><Icon className="h-5 w-5" style={{color:styles[1]}}/></span><ChevronLeft className="h-4 w-4 text-[#b2bfd0] transition group-hover:-translate-x-1"/></div><p className="mt-5 text-xs font-bold text-[#7b8da5]">{label}</p><strong className="mt-1 block text-3xl font-black text-[#142a57]">{loading?"—":value.toLocaleString()}</strong><p className="mt-2 text-[10px] font-bold" style={{color:styles[1]}}>{compare}</p></div>;
+ return <div className="group rounded-[22px] border border-[#dfe8f2] bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"><div className="flex items-start justify-between"><span className="grid h-12 w-12 place-items-center rounded-2xl" style={{background:styles[0]}}><Icon className="h-5 w-5" style={{color:styles[1]}}/></span><ChevronLeft className="h-4 w-4 text-[#b2bfd0] transition group-hover:-translate-x-1"/></div><p className="mt-5 text-xs font-bold text-[#7b8da5]">{label}</p><strong className="mt-1 block text-3xl font-black text-[#142a57]">{loading?"—":Number(value ?? 0).toLocaleString()}</strong><p className="mt-2 text-[10px] font-bold" style={{color:styles[1]}}>{compare}</p></div>;
 }
 
 function MiniChart({userTrend,bookingTrend,teacherTrend}:{userTrend:number[];bookingTrend:number[];teacherTrend:number[]}){
