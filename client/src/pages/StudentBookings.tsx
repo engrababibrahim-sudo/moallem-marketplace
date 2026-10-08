@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, CalendarDays, Clock3, GraduationCap, LogOut } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock3, GraduationCap, LogOut, XCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
-type Booking = { id:string; teacher_id:string; subject:string; start_at:string; end_at:string; timezone:string; total_price:number|null; currency:string; status:string; payment_status:string; notes:string|null };
+type Booking = { id:string; teacher_id:string; subject:string; start_at:string; end_at:string; timezone:string; total_price:number|null; currency:string; status:string; payment_status:string; notes:string|null; cancellation_reason:string|null };
 type Teacher = { id:string; display_name:string|null; country:string|null };
 
 const statuses:Record<string,string>={pending:"في انتظار تأكيد المعلم",confirmed:"مؤكد",cancelled:"ملغي",completed:"مكتمل",rejected:"مرفوض"};
@@ -17,10 +17,10 @@ function statusClass(s:string){return s==="confirmed"||s==="completed"?"bg-emera
 export default function StudentBookings(){
   const {profile,signOut}=useAuth(); const [,navigate]=useLocation();
   const [bookings,setBookings]=useState<Booking[]>([]); const [teachers,setTeachers]=useState<Record<string,Teacher>>({});
-  const [loading,setLoading]=useState(true); const [error,setError]=useState("");
+  const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [cancelling,setCancelling]=useState<string|null>(null);
   useEffect(()=>{if(!profile)return; let active=true;
     (async()=>{setLoading(true); setError("");
-      const {data,error:e}=await supabase.from("bookings").select("id,teacher_id,subject,start_at,end_at,timezone,total_price,currency,status,payment_status,notes").eq("student_id",profile.id).order("start_at",{ascending:false});
+      const {data,error:e}=await supabase.from("bookings").select("id,teacher_id,subject,start_at,end_at,timezone,total_price,currency,status,payment_status,notes,cancellation_reason").eq("student_id",profile.id).order("start_at",{ascending:false});
       if(e){if(active){setError("تعذر تحميل الحجوزات حاليًا.");setLoading(false);}return;}
       const rows=(data??[]) as Booking[]; const ids=[...new Set(rows.map(x=>x.teacher_id))]; let map:Record<string,Teacher>={};
       if(ids.length){const {data:td}=await supabase.from("public_teacher_directory").select("id,display_name,country").in("id",ids); map=Object.fromEntries(((td??[]) as Teacher[]).map(x=>[x.id,x]));}
@@ -39,7 +39,7 @@ export default function StudentBookings(){
       {loading?<div className="py-16 text-center text-sm text-black/45">جارٍ تحميل الحجوزات...</div>:error?<div className="mt-6 rounded-3xl bg-white p-8 text-center font-bold text-red-600">{error}</div>:bookings.length===0?<div className="mt-6 rounded-3xl bg-white p-10 text-center shadow-sm"><CalendarDays className="mx-auto h-10 w-10 text-black/20"/><h2 className="mt-4 text-xl font-extrabold">لا توجد حجوزات بعد</h2><p className="mt-2 text-sm text-black/50">اختر معلمًا معتمدًا وابدأ بحجز أول حصة.</p><Link href="/teachers" className="mt-5 inline-flex rounded-full bg-[#182431] px-6 py-3 text-sm font-bold text-white">تصفح المعلمين</Link></div>:
       <section className="mt-6 grid gap-4">{bookings.map(b=>{const t=teachers[b.teacher_id];return <article key={b.id} className="rounded-3xl bg-white p-6 shadow-sm"><div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-extrabold">{t?.display_name||"المعلم"}</h2><span className={"rounded-full px-3 py-1 text-xs font-bold "+statusClass(b.status)}>{statuses[b.status]||b.status}</span></div><p className="mt-2 text-sm text-black/50">{b.subject}{t?.country?" · "+t.country:""}</p></div><div className="rounded-2xl bg-[#fbf8f4] px-5 py-4 text-center"><b className="block text-lg">{b.total_price??"—"} {b.currency}</b><span className="text-xs text-black/45">قيمة الحجز</span></div></div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl bg-[#fbf8f4] p-4"><div className="flex items-center gap-2 text-xs text-black/45"><CalendarDays className="h-4 w-4"/> التاريخ</div><b className="mt-2 block text-sm">{dateText(b.start_at,b.timezone)}</b></div><div className="rounded-2xl bg-[#fbf8f4] p-4"><div className="flex items-center gap-2 text-xs text-black/45"><Clock3 className="h-4 w-4"/> الوقت</div><b className="mt-2 block text-sm">{timeText(b.start_at,b.timezone)} - {timeText(b.end_at,b.timezone)}</b><span className="mt-1 block text-xs text-black/40">{b.timezone}</span></div></div>
-        <div className="mt-3 rounded-2xl bg-[#fbf8f4] p-4"><span className="text-xs text-black/45">حالة الدفع</span><b className="mt-1 block text-sm">{payments[b.payment_status]||b.payment_status}</b></div>{b.notes&&<div className="mt-3 rounded-2xl border border-black/5 p-4"><span className="text-xs text-black/45">ملاحظتك</span><p className="mt-1 text-sm leading-6">{b.notes}</p></div>}</article>})}</section>}
+        <div className="mt-3 rounded-2xl bg-[#fbf8f4] p-4"><span className="text-xs text-black/45">حالة الدفع</span><b className="mt-1 block text-sm">{payments[b.payment_status]||b.payment_status}</b></div>{b.notes&&<div className="mt-3 rounded-2xl border border-black/5 p-4"><span className="text-xs text-black/45">ملاحظتك</span><p className="mt-1 text-sm leading-6">{b.notes}</p></div>}{b.cancellation_reason&&<div className="mt-3 rounded-2xl bg-red-50 p-4 text-sm text-red-700"><b>سبب الإلغاء:</b> {b.cancellation_reason}</div>}{(b.status==="pending"||b.status==="confirmed")&&<button type="button" disabled={cancelling===b.id} onClick={()=>cancelBooking(b.id)} className="mt-4 inline-flex items-center gap-2 rounded-full border border-red-200 px-5 py-2.5 text-sm font-bold text-red-600 disabled:opacity-50"><XCircle className="h-4 w-4"/>{cancelling===b.id?"جاري الإلغاء...":"إلغاء الحجز"}</button>}</article>})}</section>}
     </main>
   </div>;
 }
