@@ -2,7 +2,6 @@
 -- The base teacher_profiles table remains available to authenticated users
 -- according to its existing RLS policies.
 create or replace view public.public_teacher_directory
-with (security_invoker = true)
 as
 select
   id,
