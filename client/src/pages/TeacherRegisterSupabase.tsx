@@ -29,7 +29,7 @@ export default function TeacherRegisterSupabase(){
     supabase.from("teacher_profiles").select("bio,qualification,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate,currency,verification_status,rejection_reason").eq("id",user.id).maybeSingle()
       .then(({data})=>{
         if(!data)return;
-        setForm(f=>({...f,bio:data.bio??"",qualification:data.qualification??"",specialization:data.specialization??"",years_experience:String(data.years_experience??0),subjects:(data.subjects??[]).join(", "),education_stages:(data.education_stages??[]).join(", "),grades:(data.grades??[]).join(", "),teaching_format:data.teaching_format??"",hourly_rate:data.hourly_rate==null?"":String(data.hourly_rate)}));
+        setForm(f=>({...f,country:profile?.country??"مصر",currency:data.currency??"EGP",bio:data.bio??"",qualification:data.qualification??"",specialization:data.specialization??"",years_experience:String(data.years_experience??0),subjects:(data.subjects??[]).join(", "),education_stages:(data.education_stages??[]).join(", "),grades:(data.grades??[]).join(", "),teaching_format:data.teaching_format??"",hourly_rate:data.hourly_rate==null?"":String(data.hourly_rate)}));
         if(data.verification_status==="approved") setMessage("تم اعتماد ملفك. سيظهر للطلاب في سوق المعلمين.");
         if(data.verification_status==="pending") setMessage("تم إرسال ملفك للمراجعة. لا يظهر الملف في السوق قبل الاعتماد.");
         if(data.verification_status==="rejected" && data.rejection_reason) setMessage("ملاحظات المراجعة: "+data.rejection_reason);
