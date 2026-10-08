@@ -22,7 +22,7 @@ const menu = [
   ["الإعدادات","/admin/settings",Settings],
 ] as const;
 
-type Stats={users:number;teachers:number;pending:number;bookings:number;students:number;parents:number;paidRevenue:number;paidBookings:number;userTrend:number[];bookingTrend:number[];teacherTrend:number[]};
+type Stats={users:number;teachers:number;pending:number;bookings:number;students:number;parents:number;paidBookings:number;paidByCurrency:Record<string,number>;userTrend:number[];bookingTrend:number[];teacherTrend:number[]};
 
 export default function Admin(){
   const {profile,signOut}=useAuth();
@@ -103,7 +103,7 @@ function PendingBadge(){
 }
 
 function Dashboard(){
-  const [s,setS]=useState<Stats>({users:0,teachers:0,pending:0,bookings:0,students:0,parents:0,paidRevenue:0,paidBookings:0,userTrend:[],bookingTrend:[],teacherTrend:[]});
+  const [s,setS]=useState<Stats>({users:0,teachers:0,pending:0,bookings:0,students:0,parents:0,paidBookings:0,paidByCurrency:{},userTrend:[],bookingTrend:[],teacherTrend:[]});
   const [loading,setLoading]=useState(true);
 
   useEffect(()=>{
@@ -125,8 +125,8 @@ function Dashboard(){
       ]);
       const days=Array.from({length:7},(_,i)=>{const d=new Date(since);d.setDate(since.getDate()+i);return d.toISOString().slice(0,10);});
       const countByDay=(rows:any[]|null)=>days.map(day=>(rows??[]).filter(x=>String(x.created_at).slice(0,10)===day).length);
-      const revenue=(paid.data??[]).reduce((sum,row)=>sum+Number(row.total_price??0),0);
-      setS({users:u.count??0,teachers:t.count??0,pending:p.count??0,bookings:b.count??0,students:st.count??0,parents:pa.count??0,paidRevenue:revenue,paidBookings:paid.data?.length??0,userTrend:countByDay(usersTrend.data),bookingTrend:countByDay(bookingsTrend.data),teacherTrend:countByDay(teachersTrend.data)});
+      const paidByCurrency=(paid.data??[]).reduce<Record<string,number>>((acc,row)=>{const currency=String(row.currency||"EGP");acc[currency]=(acc[currency]||0)+Number(row.total_price??0);return acc;},{});
+      setS({users:u.count??0,teachers:t.count??0,pending:p.count??0,bookings:b.count??0,students:st.count??0,parents:pa.count??0,paidBookings:paid.data?.length??0,paidByCurrency,userTrend:countByDay(usersTrend.data),bookingTrend:countByDay(bookingsTrend.data),teacherTrend:countByDay(teachersTrend.data)});
       setLoading(false);
     };
     load();
