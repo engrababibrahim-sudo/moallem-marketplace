@@ -22,7 +22,7 @@ const menu = [
   ["الإعدادات","/admin/settings",Settings],
 ] as const;
 
-type Stats={users:number;teachers:number;pending:number;bookings:number;students:number;parents:number};
+type Stats={users:number;teachers:number;pending:number;bookings:number;students:number;parents:number;paidRevenue:number;paidBookings:number;userTrend:number[];bookingTrend:number[];teacherTrend:number[]};
 
 export default function Admin(){
   const {profile,signOut}=useAuth();
@@ -103,22 +103,34 @@ function PendingBadge(){
 }
 
 function Dashboard(){
-  const [s,setS]=useState<Stats>({users:0,teachers:0,pending:0,bookings:0,students:0,parents:0});
+  const [s,setS]=useState<Stats>({users:0,teachers:0,pending:0,bookings:0,students:0,parents:0,paidRevenue:0,paidBookings:0,userTrend:[],bookingTrend:[],teacherTrend:[]});
   const [loading,setLoading]=useState(true);
 
   useEffect(()=>{
-    Promise.all([
-      supabase.from("profiles").select("id",{count:"exact",head:true}),
-      supabase.from("teacher_profiles").select("id",{count:"exact",head:true}).eq("verification_status","approved"),
-      supabase.from("teacher_profiles").select("id",{count:"exact",head:true}).eq("verification_status","pending"),
-      supabase.from("bookings").select("id",{count:"exact",head:true}),
-      supabase.from("profiles").select("id",{count:"exact",head:true}).eq("role","student"),
-      supabase.from("profiles").select("id",{count:"exact",head:true}).eq("role","parent")
-    ]).then(([u,t,p,b,st,pa])=>{
-      setS({users:u.count??0,teachers:t.count??0,pending:p.count??0,bookings:b.count??0,students:st.count??0,parents:pa.count??0});
+    const since=new Date();
+    since.setDate(since.getDate()-6);
+    since.setHours(0,0,0,0);
+    const load=async()=>{
+      const [u,t,p,b,st,pa,paid,usersTrend,bookingsTrend,teachersTrend]=await Promise.all([
+        supabase.from("profiles").select("id",{count:"exact",head:true}),
+        supabase.from("teacher_profiles").select("id",{count:"exact",head:true}).eq("verification_status","approved"),
+        supabase.from("teacher_profiles").select("id",{count:"exact",head:true}).eq("verification_status","pending"),
+        supabase.from("bookings").select("id",{count:"exact",head:true}),
+        supabase.from("profiles").select("id",{count:"exact",head:true}).eq("role","student"),
+        supabase.from("profiles").select("id",{count:"exact",head:true}).eq("role","parent"),
+        supabase.from("bookings").select("total_price,currency").eq("payment_status","paid"),
+        supabase.from("profiles").select("created_at").gte("created_at",since.toISOString()),
+        supabase.from("bookings").select("created_at").gte("created_at",since.toISOString()),
+        supabase.from("teacher_profiles").select("created_at").eq("verification_status","approved").gte("created_at",since.toISOString())
+      ]);
+      const days=Array.from({length:7},(_,i)=>{const d=new Date(since);d.setDate(since.getDate()+i);return d.toISOString().slice(0,10);});
+      const countByDay=(rows:any[]|null)=>days.map(day=>(rows??[]).filter(x=>String(x.created_at).slice(0,10)===day).length);
+      const revenue=(paid.data??[]).reduce((sum,row)=>sum+Number(row.total_price??0),0);
+      setS({users:u.count??0,teachers:t.count??0,pending:p.count??0,bookings:b.count??0,students:st.count??0,parents:pa.count??0,paidRevenue:revenue,paidBookings:paid.data?.length??0,userTrend:countByDay(usersTrend.data),bookingTrend:countByDay(bookingsTrend.data),teacherTrend:countByDay(teachersTrend.data)});
       setLoading(false);
-    });
-  },[]);
+    };
+    load();
+  },[]);;
 
   const roleTotal=Math.max(s.users,1);
   const roleData=[
@@ -147,7 +159,11 @@ function Dashboard(){
       <StatCard label="المستخدمون" value={s.users} compare="إجمالي حسابات المنصة" icon={Users} tone="blue" loading={loading}/>
       <StatCard label="المعلمون" value={s.teachers} compare="معلمون معتمدون" icon={UserCheck} tone="green" loading={loading}/>
       <StatCard label="طلبات المراجعة" value={s.pending} compare="تحتاج إلى إجراء" icon={ClipboardCheck} tone="orange" loading={loading}/>
-      <StatCard label="الحجوزات" value={s.bookings} compare="إجمالي الحجوزات" icon={CalendarDays} tone="purple" loading={loading}/>
+      <StatCard label="الحجوزات" value={s.bookings} compare={s.paidBookings+" مدفوعة"} icon={CalendarDays} tone="purple" loading={loading}/>
+    </div>
+    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <StatCard label="قيمة المدفوعات" value={s.paidRevenue} compare="إجمالي الحجوزات المدفوعة" icon={CircleDollarSign} tone="green" loading={loading}/>
+      <div className="rounded-[22px] border border-[#dfe8f2] bg-gradient-to-l from-[#fff6e8] to-white p-5 shadow-sm"><p className="text-xs font-bold text-[#7b8da5]">تنبيه إداري</p><strong className="mt-2 block text-lg font-black text-[#142a57]">{s.pending>0?"هناك طلبات معلمين تحتاج مراجعة":"لا توجد طلبات معلقة الآن"}</strong><p className="mt-2 text-[10px] font-bold text-[#d97706]">{s.pending>0?"افتح قسم طلبات المعلمين لمراجعتها.":"المنصة لا تحتاج إجراءً عاجلًا حاليًا."}</p></div>
     </div>
 
     <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_.9fr]">
@@ -157,7 +173,7 @@ function Dashboard(){
           <span className="rounded-xl bg-[#f4f8fd] px-3 py-2 text-[10px] font-bold text-[#60758f]">الوقت الحالي</span>
         </div>
         <div className="mt-6 rounded-2xl bg-gradient-to-b from-[#f8fbff] to-white p-5">
-          <MiniChart bookings={s.bookings} users={s.users} teachers={s.teachers}/>
+          <MiniChart userTrend={s.userTrend} bookingTrend={s.bookingTrend} teacherTrend={s.teacherTrend}/>
         </div>
       </section>
 
@@ -204,13 +220,17 @@ function StatCard({label,value,compare,icon:Icon,tone,loading}:{label:string;val
  return <div className="group rounded-[22px] border border-[#dfe8f2] bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"><div className="flex items-start justify-between"><span className="grid h-12 w-12 place-items-center rounded-2xl" style={{background:styles[0]}}><Icon className="h-5 w-5" style={{color:styles[1]}}/></span><ChevronLeft className="h-4 w-4 text-[#b2bfd0] transition group-hover:-translate-x-1"/></div><p className="mt-5 text-xs font-bold text-[#7b8da5]">{label}</p><strong className="mt-1 block text-3xl font-black text-[#142a57]">{loading?"—":value.toLocaleString()}</strong><p className="mt-2 text-[10px] font-bold" style={{color:styles[1]}}>{compare}</p></div>;
 }
 
-function MiniChart({bookings,users,teachers}:{bookings:number;users:number;teachers:number}){
- const max=Math.max(users,bookings*2,teachers*4,10);
- const a=[.28,.34,.31,.45,.5,.62,.58].map(v=>v*Math.max(users,1)/max);
- const b=[.18,.23,.21,.3,.34,.4,.38].map(v=>v*Math.max(bookings*2,1)/max);
- const c=[.12,.14,.16,.2,.24,.28,.26].map(v=>v*Math.max(teachers*4,1)/max);
- const pts=(arr:number[])=>arr.map((v,i)=>`${35+i*83},${145-v*105}`).join(" ");
- return <svg viewBox="0 0 560 170" className="h-48 w-full" role="img" aria-label="رسم بياني إحصائي"><defs><linearGradient id="blueArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity=".20"/><stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/></linearGradient></defs><g stroke="#e7edf5" strokeWidth="1">{[35,77,119,161].map(y=><line key={y} x1="25" x2="540" y1={y} y2={y}/>)}</g><polygon points={`35,145 ${pts(a)} 533,145`} fill="url(#blueArea)"/><polyline points={pts(a)} fill="none" stroke="#3b82f6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/><polyline points={pts(b)} fill="none" stroke="#20b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><polyline points={pts(c)} fill="none" stroke="#8b5cf6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>{[...Array(7)].map((_,i)=><text key={i} x={35+i*83} y="164" textAnchor="middle" fontSize="9" fill="#8da0b9">{i+1} يوم</text>)}</svg>;
+function MiniChart({userTrend,bookingTrend,teacherTrend}:{userTrend:number[];bookingTrend:number[];teacherTrend:number[]}){
+ const max=Math.max(...userTrend,...bookingTrend,...teacherTrend,1);
+ const pts=(arr:number[])=>arr.map((v,i)=>`${35+i*83},${145-(v/max)*105}`).join(" ");
+ const labels=["قبل 6 أيام","قبل 5 أيام","قبل 4 أيام","قبل 3 أيام","قبل يومين","أمس","اليوم"];
+ return <svg viewBox="0 0 560 175" className="h-48 w-full" role="img" aria-label="النشاط الحقيقي خلال آخر 7 أيام">
+  <g stroke="#e7edf5" strokeWidth="1">{[35,70,105,140].map(y=><line key={y} x1="25" x2="540" y1={y} y2={y}/>)}</g>
+  <polyline points={pts(userTrend)} fill="none" stroke="#3b82f6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+  <polyline points={pts(bookingTrend)} fill="none" stroke="#20b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+  <polyline points={pts(teacherTrend)} fill="none" stroke="#8b5cf6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+  {[...Array(7)].map((_,i)=><text key={i} x={35+i*83} y="166" textAnchor="middle" fontSize="8" fill="#8da0b9">{labels[i]}</text>)}
+ </svg>;
 }
 
 function Donut({data}:{data:{label:string;value:number;color:string;pct:number}[]}){
