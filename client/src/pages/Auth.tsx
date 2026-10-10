@@ -31,6 +31,20 @@ export default function Auth() {
 
   useEffect(() => { if (user && !loading) navigate("/portal"); }, [user, loading, navigate]);
 
+  async function signInWithGoogle() {
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin + "/portal" },
+      });
+      if (authError) throw authError;
+    } catch (e) {
+      setError(friendly(e instanceof Error ? e.message : "تعذر تسجيل الدخول باستخدام Google."));
+      setBusy(false);
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true); setError(""); setMessage("");
@@ -72,7 +86,14 @@ export default function Auth() {
         <p className="mt-2 text-sm text-black/50">{mode === "login" ? "استخدم بريدك وكلمة المرور للدخول." : "اختر نوع الحساب. الحسابات الإدارية تُمنح من الإدارة فقط."}</p>
         {error && <div role="alert" className="mt-5 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
         {message && <div role="status" className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{message}</div>}
-        <form onSubmit={submit} className="mt-7 space-y-4">
+        {mode === "login" && <>
+          <button type="button" onClick={signInWithGoogle} disabled={busy} className="mt-7 flex w-full items-center justify-center gap-3 rounded-full border border-black/15 bg-white py-4 font-bold text-[#182431] transition hover:bg-[#fbf8f4] disabled:opacity-50">
+            <span aria-hidden="true" className="text-xl font-extrabold text-[#4285F4]">G</span>
+            {busy ? "جارٍ التحويل إلى Google..." : "الدخول باستخدام Google"}
+          </button>
+          <div className="mt-5 flex items-center gap-3 text-xs text-black/35"><span className="h-px flex-1 bg-black/10" /><span>أو باستخدام البريد الإلكتروني</span><span className="h-px flex-1 bg-black/10" /></div>
+        </>}
+        <form onSubmit={submit} className={mode === "login" ? "mt-5 space-y-4" : "mt-7 space-y-4"}>
           {mode === "signup" && <><label className="block text-sm font-bold">الاسم الكامل<div className="mt-2 flex items-center rounded-xl bg-[#fbf8f4] px-3"><UserRound className="h-4 w-4 text-black/35" /><input required value={name} onChange={e=>setName(e.target.value)} className="w-full bg-transparent px-3 py-3 outline-none" /></div></label><label className="block text-sm font-bold">نوع الحساب<select value={role} onChange={e=>setRole(e.target.value as SignupRole)} className="mt-2 w-full rounded-xl bg-[#fbf8f4] px-3 py-3 outline-none">{Object.entries(roleLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label></>}
           <label className="block text-sm font-bold">البريد الإلكتروني<div className="mt-2 flex items-center rounded-xl bg-[#fbf8f4] px-3"><Mail className="h-4 w-4 text-black/35" /><input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-transparent px-3 py-3 outline-none" /></div></label>
           <label className="block text-sm font-bold">كلمة المرور<div className="mt-2 flex items-center rounded-xl bg-[#fbf8f4] px-3"><LockKeyhole className="h-4 w-4 text-black/35" /><input required minLength={8} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-transparent px-3 py-3 outline-none" /></div></label>
