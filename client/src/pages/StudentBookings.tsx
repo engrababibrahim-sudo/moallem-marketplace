@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 
 type Booking = { id:string; teacher_id:string; subject:string; start_at:string; end_at:string; timezone:string; total_price:number|null; currency:string; status:string; payment_status:string; notes:string|null; cancellation_reason:string|null };
 type Teacher = { id:string; display_name:string|null; country:string|null };
+type StudentLiveSession = { booking_id:string; provider:"zoom"|"google_meet"; join_url:string|null; scheduled_start_at:string; scheduled_end_at:string; status:string };
 
 const statuses:Record<string,string>={pending:"في انتظار تأكيد المعلم",confirmed:"مؤكد",cancelled:"ملغي",completed:"مكتمل",rejected:"مرفوض"};
 const payments:Record<string,string>={unpaid:"غير مدفوع حاليًا",pending:"الدفع قيد الانتظار",paid:"تم الدفع",failed:"فشل الدفع",refunded:"تم رد المبلغ"};
@@ -16,7 +17,7 @@ function statusClass(s:string){return s==="confirmed"||s==="completed"?"bg-emera
 
 export default function StudentBookings(){
   const {profile,signOut}=useAuth(); const [,navigate]=useLocation();
-  const [bookings,setBookings]=useState<Booking[]>([]); const [teachers,setTeachers]=useState<Record<string,Teacher>>({});
+  const [bookings,setBookings]=useState<Booking[]>([]); const [teachers,setTeachers]=useState<Record<string,Teacher>>({}); const [liveSessions,setLiveSessions]=useState<Record<string,StudentLiveSession>>({});
   const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [cancelling,setCancelling]=useState<string|null>(null); const [confirming,setConfirming]=useState<string|null>(null); const [paying,setPaying]=useState<string|null>(null);
 
   useEffect(()=>{if(!profile)return; let active=true;
@@ -25,7 +26,23 @@ export default function StudentBookings(){
       if(e){if(active){setError("تعذر تحميل الحجوزات حاليًا.");setLoading(false);}return;}
       const rows=(data??[]) as Booking[]; const ids=[...new Set(rows.map(x=>x.teacher_id))]; let map:Record<string,Teacher>={};
       if(ids.length){const {data:td}=await supabase.from("public_teacher_directory").select("id,display_name,country").in("id",ids); map=Object.fromEntries(((td??[]) as Teacher[]).map(x=>[x.id,x]));}
-      if(active){setBookings(rows);setTeachers(map);setLoading(false);}
+      if(active){setBookings(rows);setTeachers(map);}
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token;
+      if (token && rows.length) {
+        try {
+          const response = await fetch("/api/live-sessions/student", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const result = await response.json().catch(() => null);
+          if (response.ok && Array.isArray(result?.sessions) && active) {
+            setLiveSessions(Object.fromEntries((result.sessions as StudentLiveSession[]).map(s => [s.booking_id, s])));
+          }
+        } catch (sessionError) {
+          console.error("Unable to load student live sessions", sessionError);
+        }
+      }
+      if(active)setLoading(false);
     })(); return()=>{active=false};
   },[profile]);
 
@@ -64,6 +81,8 @@ export default function StudentBookings(){
         <div className="mt-3 rounded-2xl bg-[#fbf8f4] p-4"><span className="text-xs text-black/45">حالة الدفع</span><b className="mt-1 block text-sm">{payments[b.payment_status]||b.payment_status}</b>
           {b.status==="confirmed"&&(b.payment_status==="unpaid"||b.payment_status==="failed")&&<button type="button" disabled={paying===b.id} onClick={()=>simulatePayment(b.id)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#182431] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"><CreditCard className="h-4 w-4"/>{paying===b.id?"جاري تجربة الدفع...":"تجربة الدفع (بدون أموال)"}</button>}
         </div>
+        {b.status==="confirmed"&&b.payment_status==="paid"&&liveSessions[b.id]?.join_url&&<div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4"><b className="block text-sm text-emerald-800">حصة Zoom جاهزة</b><p className="mt-1 text-xs leading-6 text-emerald-700">يمكنك الدخول إلى الحصة من الرابط التالي في موعدها.</p><a href={liveSessions[b.id].join_url!} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center justify-center rounded-full bg-[#2d8cff] px-5 py-3 text-sm font-extrabold text-white">دخول الطالب إلى Zoom</a></div>}
+        {b.status==="confirmed"&&b.payment_status!=="paid"&&<div className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">سيظهر رابط دخول الحصة بعد اكتمال الدفع.</div>}
         {b.notes&&<div className="mt-3 rounded-2xl border border-black/5 p-4"><span className="text-xs text-black/45">ملاحظتك</span><p className="mt-1 text-sm leading-6">{b.notes}</p></div>}
         {b.cancellation_reason&&<div className="mt-3 rounded-2xl bg-red-50 p-4 text-sm text-red-700"><b>سبب الإلغاء:</b> {b.cancellation_reason}</div>}
         {(b.status==="pending"||b.status==="confirmed")&&<div className="mt-4 flex flex-wrap items-center gap-2">{confirming===b.id?<><span className="text-sm font-bold text-red-700">هل تريدين إلغاء الحجز؟</span><button type="button" disabled={cancelling===b.id} onClick={()=>cancelBooking(b.id)} className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{cancelling===b.id?"جاري الإلغاء...":"نعم، إلغاء الحجز"}</button><button type="button" disabled={cancelling===b.id} onClick={()=>setConfirming(null)} className="rounded-full border border-black/10 px-5 py-2.5 text-sm font-bold">تراجع</button></>:<button type="button" onClick={()=>setConfirming(b.id)} className="inline-flex items-center gap-2 rounded-full border border-red-200 px-5 py-2.5 text-sm font-bold text-red-600"><XCircle className="h-4 w-4"/>إلغاء الحجز</button>}</div>}
