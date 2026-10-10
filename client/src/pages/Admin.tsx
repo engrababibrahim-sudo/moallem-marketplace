@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  Activity, Bell, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, CircleDollarSign,
+  Activity, Bell, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, CircleDollarSign, Video,
   ClipboardCheck, FileText, GraduationCap, Headphones, LayoutDashboard, LogOut, Menu,
   Search, Settings, ShieldCheck, Sparkles, UserCheck, UserRound, Users, X, XCircle
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import Finance from "./Finance";
+import AdminZoomAttendance from "./AdminZoomAttendance";
 import { supabase } from "@/lib/supabase";
 
 const menu = [
@@ -16,6 +17,7 @@ const menu = [
   ["أولياء الأمور","/admin/parents",UserRound],
   ["طلبات المعلمين","/admin/teachers",ClipboardCheck],
   ["الحجوزات","/admin/bookings",CalendarDays],
+  ["حضور لقاءات Zoom","/admin/attendance",Video],
   ["المالية والعمولة","/admin/finance",CircleDollarSign],
   ["المحتوى التعليمي","/admin/content",BookOpen],
   ["الدعم","/admin/support",Headphones],
@@ -91,7 +93,7 @@ export default function Admin(){
       </header>
 
       <main className="mx-auto max-w-[1540px] p-5 lg:p-8">
-        {location==="/admin"?<Dashboard/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/finance"?<Finance/>:<Inactive title={title}/>}
+        {location==="/admin"?<Dashboard/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:<Inactive title={title}/>}
       </main>
     </div>
   </div>;
