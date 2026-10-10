@@ -1,6 +1,10 @@
-import { createApp } from "../../server/app";
+import express from "express";
+import { registerLiveSessionManagementRoutes } from "../../server/liveSessions/routes";
 
-const app = createApp();
+const app = express();
+
+app.use(express.json({ limit: "1mb" }));
+registerLiveSessionManagementRoutes(app);
 
 export default function handler(req: any, res: any) {
   return app(req, res);
