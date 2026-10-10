@@ -35,5 +35,9 @@ export default async function handler(req: any, res: any) {
       student: peopleById[s.bookings?.student_id] || null, teacher: peopleById[s.bookings?.teacher_id] || null,
       events: (events || []).filter((e: any) => e.booking_id === s.booking_id)
     })) });
-  } catch (error) { console.error("Admin attendance report failed", error); return send(res, 500, { error: "تعذر تحميل تقرير الحضور." }); }
+  } catch (error) {
+    console.error("Admin attendance report failed", error);
+    const detail = error && typeof error === "object" && "message" in error ? String((error as any).message) : "Unknown server error";
+    return send(res, 500, { error: "تعذر تحميل تقرير الحضور.", detail });
+  }
 }
