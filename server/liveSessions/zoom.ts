@@ -2,7 +2,7 @@ import type {
   CreateMeetingInput,
   CreatedMeeting,
   MeetingProviderAdapter,
-} from "./providers";
+} from "./providers.ts";
 
 type ZoomTokenResponse = {
   access_token?: string;
