@@ -1,5 +1,5 @@
 import type { Express, Request, Response } from "express";
-import { zoomAdapter } from "./zoom";
+import { zoomAdapter } from "./zoom.ts";
 
 export type MeetingProvider = "zoom" | "google_meet";
 
