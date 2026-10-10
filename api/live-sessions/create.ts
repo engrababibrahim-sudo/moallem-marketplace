@@ -1,5 +1,5 @@
 import express from "express";
-import { registerLiveSessionManagementRoutes } from "../../server/liveSessions/routes";
+import { registerLiveSessionManagementRoutes } from "../../server/liveSessions/routes.ts";
 
 const app = express();
 
