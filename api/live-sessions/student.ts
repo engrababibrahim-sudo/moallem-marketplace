@@ -54,8 +54,7 @@ export default async function handler(req: any, res: any) {
     const { data: sessions, error: sessionError } = await admin
       .from("live_sessions")
       .select("booking_id,provider,join_url,scheduled_start_at,scheduled_end_at,status")
-      .in("booking_id", ids)
-      .eq("status", "scheduled");
+      .in("booking_id", ids);
 
     if (sessionError) {
       console.error("Student live sessions lookup error", sessionError);
