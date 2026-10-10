@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+export const config = { api: { bodyParser: false } };
+
 function send(res: any, status: number, body: unknown) {
   return res.status(status).json(body);
 }
@@ -13,7 +15,17 @@ export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
   const secret = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
   if (!secret) return send(res, 503, { error: "Zoom webhook secret is not configured" });
-  const body = req.body && typeof req.body === "object" ? req.body : {};
+  let raw = "";
+  try {
+    if (typeof req.rawBody === "string") raw = req.rawBody;
+    else {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      raw = Buffer.concat(chunks).toString("utf8");
+    }
+  } catch { return send(res, 400, { error: "Invalid request body" }); }
+  let body: any;
+  try { body = JSON.parse(raw || "{}"); } catch { return send(res, 400, { error: "Invalid JSON" }); }
   if (body.event === "endpoint.url_validation") {
     const plainToken = String(body.payload?.plainToken || "");
     if (!plainToken) return send(res, 400, { error: "Missing validation token" });
@@ -22,7 +34,6 @@ export default async function handler(req: any, res: any) {
   }
   const timestamp = String(req.headers["x-zm-request-timestamp"] || "");
   const signature = String(req.headers["x-zm-signature"] || "");
-  const raw = typeof req.rawBody === "string" ? req.rawBody : JSON.stringify(body);
   if (!timestamp || !signature || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) {
     return send(res, 401, { error: "Invalid webhook timestamp" });
   }
