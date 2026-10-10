@@ -14,7 +14,7 @@ export default function AdminZoomAttendance(){
    if(!token){setError("انتهت جلسة الدخول. سجّلي الدخول مرة أخرى.");setLoading(false);return;}
    const response=await fetch("/api/admin/zoom-attendance",{headers:{Authorization:"Bearer "+token}});
    const body=await response.json().catch(()=>null);
-   if(!response.ok)throw new Error(body?.error||"تعذر تحميل تقرير الحضور.");
+   if(!response.ok)throw new Error([body?.error,body?.detail].filter(Boolean).join(" — ")||"تعذر تحميل تقرير الحضور.");
    setSessions(body.sessions||[]);
   }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل تقرير الحضور.");}
   finally{setLoading(false);}
@@ -26,7 +26,7 @@ export default function AdminZoomAttendance(){
    <button onClick={()=>void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#142a57] disabled:opacity-50"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/> تحديث التقرير</button>
   </div>
   <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><ShieldAlert className="mt-0.5 h-5 w-5 shrink-0"/><p>يلزم تشغيل ترحيل قاعدة البيانات وإضافة عنوان Webhook في Zoom حتى تبدأ الأحداث في الظهور. اللقاءات السابقة لن تظهر بأثر رجعي تلقائيًا.</p></div>
-  {error&&<div role="alert" className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+  {error&&<div role="alert" className="break-words rounded-2xl bg-red-50 p-4 text-sm text-red-700">{error}</div>}
   {loading?<div className="py-12 text-center text-sm text-slate-500">جارٍ تحميل تقرير الحضور…</div>:error?null:sessions.length===0?<div className="rounded-2xl bg-white p-10 text-center text-sm text-slate-500">لا توجد لقاءات Zoom مسجلة حتى الآن.</div>:<div className="space-y-4">{sessions.map(s=>{
    const joined=s.events.filter(e=>e.event_type==="meeting.participant_joined"),left=s.events.filter(e=>e.event_type==="meeting.participant_left");
    const studentEvents=s.events.filter(e=>e.participant_email&&e.participant_email===s.student?.email);
