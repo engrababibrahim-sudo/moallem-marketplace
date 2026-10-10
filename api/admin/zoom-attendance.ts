@@ -12,8 +12,9 @@ export default async function handler(req: any, res: any) {
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) return send(res, 401, { error: "جلسة الدخول غير صالحة." });
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { data: profile, error: profileError } = await userClient.from("profiles").select("role").eq("id", userData.user.id).maybeSingle();
-    if (profileError || !profile || !["admin", "super_admin", "support"].includes(profile.role)) return send(res, 403, { error: "ليس لديك صلاحية عرض تقارير الحضور." });
+    const { data: profile, error: profileError } = await admin.from("profiles").select("role").eq("id", userData.user.id).maybeSingle();
+    if (profileError) throw profileError;
+    if (!profile || !["admin", "super_admin", "support"].includes(profile.role)) return send(res, 403, { error: "ليس لديك صلاحية عرض تقارير الحضور." });
     const { data: sessions, error: sessionsError } = await admin.from("live_sessions")
       .select("booking_id,provider_meeting_id,status,scheduled_start_at,scheduled_end_at,bookings(id,subject,start_at,end_at,status,payment_status,student_id,teacher_id)")
       .eq("provider", "zoom").order("scheduled_start_at", { ascending: false }).limit(100);
