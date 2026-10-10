@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Express, Request, Response } from "express";
-import { getMeetingProvider, type MeetingProvider } from "./providers";
+import { getMeetingProvider, type MeetingProvider } from "./providers.ts";
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabasePublishableKey =
