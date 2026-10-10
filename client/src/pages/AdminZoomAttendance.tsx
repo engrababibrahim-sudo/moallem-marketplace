@@ -27,7 +27,7 @@ export default function AdminZoomAttendance(){
   </div>
   <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><ShieldAlert className="mt-0.5 h-5 w-5 shrink-0"/><p>يلزم تشغيل ترحيل قاعدة البيانات وإضافة عنوان Webhook في Zoom حتى تبدأ الأحداث في الظهور. اللقاءات السابقة لن تظهر بأثر رجعي تلقائيًا.</p></div>
   {error&&<div role="alert" className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{error}</div>}
-  {loading?<div className="py-12 text-center text-sm text-slate-500">جارٍ تحميل تقرير الحضور…</div>:sessions.length===0?<div className="rounded-2xl bg-white p-10 text-center text-sm text-slate-500">لا توجد لقاءات Zoom مسجلة حتى الآن.</div>:<div className="space-y-4">{sessions.map(s=>{
+  {loading?<div className="py-12 text-center text-sm text-slate-500">جارٍ تحميل تقرير الحضور…</div>:error?null:sessions.length===0?<div className="rounded-2xl bg-white p-10 text-center text-sm text-slate-500">لا توجد لقاءات Zoom مسجلة حتى الآن.</div>:<div className="space-y-4">{sessions.map(s=>{
    const joined=s.events.filter(e=>e.event_type==="meeting.participant_joined"),left=s.events.filter(e=>e.event_type==="meeting.participant_left");
    const studentEvents=s.events.filter(e=>e.participant_email&&e.participant_email===s.student?.email);
    const teacherEvents=s.events.filter(e=>e.participant_email&&e.participant_email===s.teacher?.email);
