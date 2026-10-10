@@ -18,7 +18,7 @@ function statusClass(s:string){return s==="confirmed"||s==="completed"?"bg-emera
 export default function StudentBookings(){
   const {profile,signOut}=useAuth(); const [,navigate]=useLocation();
   const [bookings,setBookings]=useState<Booking[]>([]); const [teachers,setTeachers]=useState<Record<string,Teacher>>({}); const [liveSessions,setLiveSessions]=useState<Record<string,StudentLiveSession>>({});
-  const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [cancelling,setCancelling]=useState<string|null>(null); const [confirming,setConfirming]=useState<string|null>(null); const [paying,setPaying]=useState<string|null>(null);
+  const [loading,setLoading]=useState(true); const [error,setError]=useState(""); const [sessionError,setSessionError]=useState(""); const [cancelling,setCancelling]=useState<string|null>(null); const [confirming,setConfirming]=useState<string|null>(null); const [paying,setPaying]=useState<string|null>(null);
 
   useEffect(()=>{if(!profile)return; let active=true;
     (async()=>{setLoading(true); setError("");
@@ -37,9 +37,13 @@ export default function StudentBookings(){
           const result = await response.json().catch(() => null);
           if (response.ok && Array.isArray(result?.sessions) && active) {
             setLiveSessions(Object.fromEntries((result.sessions as StudentLiveSession[]).map(s => [s.booking_id, s])));
+            setSessionError("");
+          } else if (active) {
+            setSessionError(typeof result?.error === "string" ? result.error : "تعذر تحميل رابط الحصة. يرجى تحديث الصفحة، وإذا استمرت المشكلة فهناك خطأ في خدمة روابط الحصص.");
           }
-        } catch (sessionError) {
-          console.error("Unable to load student live sessions", sessionError);
+        } catch (sessionLoadError) {
+          console.error("Unable to load student live sessions", sessionLoadError);
+          if (active) setSessionError("تعذر الاتصال بخدمة روابط الحصص. يرجى تحديث الصفحة.");
         }
       }
       if(active)setLoading(false);
@@ -82,6 +86,7 @@ export default function StudentBookings(){
           {b.status==="confirmed"&&(b.payment_status==="unpaid"||b.payment_status==="failed")&&<button type="button" disabled={paying===b.id} onClick={()=>simulatePayment(b.id)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#182431] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"><CreditCard className="h-4 w-4"/>{paying===b.id?"جاري تجربة الدفع...":"تجربة الدفع (بدون أموال)"}</button>}
         </div>
         {b.status==="confirmed"&&b.payment_status==="paid"&&liveSessions[b.id]?.join_url&&<div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4"><b className="block text-sm text-emerald-800">حصة Zoom جاهزة</b><p className="mt-1 text-xs leading-6 text-emerald-700">يمكنك الدخول إلى الحصة من الرابط التالي في موعدها.</p><a href={liveSessions[b.id].join_url!} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center justify-center rounded-full bg-[#2d8cff] px-5 py-3 text-sm font-extrabold text-white">دخول الطالب إلى Zoom</a></div>}
+        {b.status==="confirmed"&&b.payment_status==="paid"&&!liveSessions[b.id]?.join_url&&<div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><b className="block">تم الدفع، لكن رابط الحصة لم يصل بعد</b><p className="mt-1 leading-6">{sessionError||"لم يتم العثور على رابط Zoom لهذا الحجز. يرجى تحديث الصفحة؛ إذا استمرت المشكلة فسيحتاج فريق الدعم إلى فحص إعداد الحصة."}</p><button type="button" onClick={()=>window.location.reload()} className="mt-3 rounded-full border border-amber-300 px-4 py-2 text-xs font-bold">إعادة تحميل الحجوزات</button></div>}
         {b.status==="confirmed"&&b.payment_status!=="paid"&&<div className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">سيظهر رابط دخول الحصة بعد اكتمال الدفع.</div>}
         {b.notes&&<div className="mt-3 rounded-2xl border border-black/5 p-4"><span className="text-xs text-black/45">ملاحظتك</span><p className="mt-1 text-sm leading-6">{b.notes}</p></div>}
         {b.cancellation_reason&&<div className="mt-3 rounded-2xl bg-red-50 p-4 text-sm text-red-700"><b>سبب الإلغاء:</b> {b.cancellation_reason}</div>}
