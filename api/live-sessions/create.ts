@@ -9,6 +9,7 @@ type Booking = {
   end_at: string;
   timezone: string | null;
   status: string;
+  payment_status: string;
   meeting_provider: string | null;
 };
 
@@ -160,7 +161,7 @@ export default async function handler(req: any, res: any) {
 
     const { data: booking, error: bookingError } = await userClient
       .from("bookings")
-      .select("id,student_id,teacher_id,subject,start_at,end_at,timezone,status,meeting_provider")
+      .select("id,student_id,teacher_id,subject,start_at,end_at,timezone,status,payment_status,meeting_provider")
       .eq("id", bookingId)
       .maybeSingle();
 
@@ -176,6 +177,9 @@ export default async function handler(req: any, res: any) {
     }
     if (typedBooking.status !== "confirmed") {
       return json(res, 400, { error: "لا يمكن إنشاء اجتماع إلا للحجز المؤكد." });
+    }
+    if (typedBooking.payment_status !== "paid") {
+      return json(res, 402, { error: "يجب إتمام الدفع قبل إنشاء رابط الحصة." });
     }
     if (typedBooking.meeting_provider && typedBooking.meeting_provider !== "zoom") {
       return json(res, 409, { error: "تم تحديد مزود اجتماع مختلف لهذا الحجز." });
