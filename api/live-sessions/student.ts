@@ -61,15 +61,29 @@ export default async function handler(req: any, res: any) {
       return json(res, 500, { error: "تعذر تحميل روابط الحصص." });
     }
 
+    const { data: segments, error: segmentError } = await admin.from("live_session_segments")
+      .select("booking_id,join_url,scheduled_start_at,scheduled_end_at,status")
+      .in("booking_id", ids).eq("segment_number", 2);
+    if (segmentError) {
+      console.error("Student continuation lookup error", segmentError);
+      return json(res, 500, { error: "تعذر تحميل رابط استكمال الحصة." });
+    }
+    const continuationByBooking = Object.fromEntries((segments ?? []).map((segment: any) => [segment.booking_id, segment]));
     return json(res, 200, {
-      sessions: (sessions ?? []).map((session: any) => ({
-        booking_id: session.booking_id,
-        provider: session.provider,
-        join_url: session.join_url,
-        scheduled_start_at: session.scheduled_start_at,
-        scheduled_end_at: session.scheduled_end_at,
-        status: session.status,
-      })),
+      sessions: (sessions ?? []).map((session: any) => {
+        const continuation = continuationByBooking[session.booking_id];
+        return {
+          booking_id: session.booking_id,
+          provider: session.provider,
+          join_url: session.join_url,
+          scheduled_start_at: session.scheduled_start_at,
+          scheduled_end_at: session.scheduled_end_at,
+          status: session.status,
+          continuation_join_url: continuation?.join_url ?? null,
+          continuation_scheduled_start_at: continuation?.scheduled_start_at ?? null,
+          continuation_scheduled_end_at: continuation?.scheduled_end_at ?? null,
+        };
+      }),
     });
   } catch (error) {
     console.error("Student live sessions error", error);
