@@ -111,10 +111,14 @@ export default function Teachers() {
         return normalized;
       };
       const matchesSubject = !subject || (teacher.subjects || []).some((item) => normalizeSubject(item) === normalizeSubject(subject));
+      const teacherStages = teacher.education_stages || [];
+      const teacherGrades = teacher.grades || [];
+      const hasStageInformation = teacherStages.length > 0 || teacherGrades.length > 0;
       const matchesStage =
         !stage ||
-        (teacher.education_stages || []).some((item) => normalizeStage(item) === normalizeStage(stage)) ||
-        (teacher.grades || []).some((item) => normalizeStage(item) === normalizeStage(stage));
+        !hasStageInformation ||
+        teacherStages.some((item) => normalizeStage(item) === normalizeStage(stage)) ||
+        teacherGrades.some((item) => normalizeStage(item) === normalizeStage(stage));
       const matchesCurrency = !currency || teacher.currency === currency;
       const matchesCountry = !country || teacher.country === country;
 
