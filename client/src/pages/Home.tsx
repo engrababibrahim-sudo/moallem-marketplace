@@ -95,11 +95,11 @@ const faqs = [
 ];
 
 const navLinks = [
-  ["كيف تعمل", "#how"],
-  ["المعلمون", "#teachers"],
-  ["لأولياء الأمور", "#parents"],
-  ["للمعلمين", "#tutors"],
-  ["الأسئلة الشائعة", "#faq"],
+  ["كيف تعمل", "/#how"],
+  ["المعلمون", "/#teachers"],
+  ["لأولياء الأمور", "/#parents"],
+  ["للمعلمين", "/#tutors"],
+  ["الأسئلة الشائعة", "/#faq"],
 ] as const;
 
 export default function Home() {
@@ -307,6 +307,27 @@ export default function Home() {
           <div className="mx-auto grid max-w-7xl gap-7 px-5 lg:grid-cols-[1fr_auto] lg:items-center lg:px-10"><div><p className="text-sm font-bold text-[#a84c00]">للمعلمين</p><h2 className="mt-3 text-3xl font-bold sm:text-4xl">علّم بطريقتك، ووسّع أثرك.</h2><p className="mt-3 max-w-2xl leading-7 text-[#182431]/65">أنشئ ملفك، أضف المواد والمراحل التي تدرّسها، وحدد أوقاتك المناسبة. طلبات الانضمام تخضع للمراجعة قبل الظهور في السوق.</p></div><Link href="/teacher/register" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff7a00] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/15">قدّم كمعلم <ArrowLeft className="h-4 w-4" /></Link></div>
         </section>
 
+        <section id="account-areas" className="border-y border-[#182431]/[0.07] bg-white py-16 lg:py-20">
+          <div className="mx-auto max-w-7xl px-5 lg:px-10">
+            <SectionHeading eyebrow="مساحات المنصة" title={<>كل مستخدم له مساحة<br className="hidden sm:block" /> تناسب دوره.</>} copy="ادخل إلى حسابك لمتابعة المهام والمواعيد والبيانات المخصصة لصلاحياتك. تظهر أدوات الإدارة للموظفين المخوّلين فقط." />
+            <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { icon: GraduationCap, title: "الطالب", text: "الحجوزات والدروس وخطوات التعلم.", href: "/portal", action: "دخول مساحة الطالب" },
+                { icon: Users, title: "ولي الأمر", text: "متابعة الأبناء وطلبات الدروس من الحساب.", href: "/portal", action: "دخول حساب ولي الأمر" },
+                { icon: BookOpen, title: "المعلم", text: "إدارة الملف والمواعيد وطلبات الحجز.", href: "/teacher/register", action: "مساحة المعلم" },
+                { icon: ShieldCheck, title: "الإدارة", text: "إدارة المستخدمين ومراجعة طلبات الانضمام.", href: "/admin", action: "دخول الإدارة" },
+              ].map(({ icon: Icon, title, text, href, action }) => (
+                <article key={title} className="flex flex-col rounded-[1.5rem] border border-[#182431]/[0.08] bg-[#fbf8f4] p-5 transition hover:-translate-y-1 hover:border-[#ff7a00]/40 hover:shadow-lg hover:shadow-[#182431]/[0.05]">
+                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#fff0e2] text-[#c35a00]"><Icon className="h-5 w-5" /></span>
+                  <h3 className="mt-5 text-lg font-bold">{title}</h3>
+                  <p className="mt-2 min-h-12 text-sm leading-6 text-[#182431]/60">{text}</p>
+                  <Link href={href} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#b85400]">{action}<ArrowLeft className="h-4 w-4" /></Link>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="mx-auto max-w-7xl px-5 py-20 lg:px-10">
           <SectionHeading eyebrow="الوضوح من البداية" title="تفاصيل واضحة قبل الحجز" copy="راجع سعر الحصة ومدتها وشروط الحجز الظاهرة في ملف المعلم قبل إرسال الطلب." />
           <div className="mt-8 grid gap-4 md:grid-cols-3"><PriceInfo icon={Wallet} title="سعر ظاهر" text="يعرض ملف المعلم سعر الحصة ومدتها قبل أن تبدأ طلب الحجز." /><PriceInfo icon={CalendarDays} title="موعد يناسبك" text="تعرّف على المواعيد المتاحة، ثم أرسل طلبك لمراجعة التوفر." /><PriceInfo icon={ShieldCheck} title="بدون مفاجآت" text="بوابات الدفع واسترداد الأموال تحتاج إلى تهيئة مزود رسمي قبل الإطلاق." /></div>
@@ -317,7 +338,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="bg-[#182431] px-5 py-12 text-white lg:px-10"><div className="mx-auto grid max-w-7xl gap-9 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]"><div><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#ff7a00]"><GraduationCap className="h-5 w-5" /></span><b className="text-lg">مُعلّم</b></div><p className="mt-4 max-w-xs text-sm leading-7 text-white/55">اختر معلمك، احجز موعدك، وابدأ رحلة تعلم مصممة لك.</p><p className="mt-4 text-[10px] text-white/35">منصة مُعلّم التعليمية · مصر · © ٢٠٢٦</p></div><FooterGroup title="اكتشف" links={[["المعلمون", "/teachers"], ["كيف تعمل", "#how"], ["الأسئلة الشائعة", "#faq"]]} /><FooterGroup title="مجتمع مُعلّم" links={[["للطلاب", "#parents"], ["لأولياء الأمور", "#parents"], ["للمعلمين", "/teacher/register"]]} /><div><b className="text-sm">تواصل معنا</b><p className="mt-4 flex items-center gap-2 text-sm text-white/55"><MessageCircle className="h-4 w-4" /> لخدمة العملاء والاستفسارات</p><div className="mt-3 flex flex-wrap gap-4 text-xs text-white/40"><Link href="/auth">حسابك</Link><Link href="/teachers">المعلمون</Link></div></div></div></footer>
+      <footer className="bg-[#182431] px-5 py-12 text-white lg:px-10"><div className="mx-auto grid max-w-7xl gap-9 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]"><div><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#ff7a00]"><GraduationCap className="h-5 w-5" /></span><b className="text-lg">مُعلّم</b></div><p className="mt-4 max-w-xs text-sm leading-7 text-white/55">اختر معلمك، احجز موعدك، وابدأ رحلة تعلم مصممة لك.</p><p className="mt-4 text-[10px] text-white/35">منصة مُعلّم التعليمية · مصر · © ٢٠٢٦</p></div><FooterGroup title="اكتشف" links={[["المعلمون", "/teachers"], ["كيف تعمل", "/#how"], ["الأسئلة الشائعة", "/#faq"]]} /><FooterGroup title="مجتمع مُعلّم" links={[["للطلاب", "/#parents"], ["لأولياء الأمور", "/#parents"], ["للمعلمين", "/teacher/register"]]} /><div><b className="text-sm">تواصل معنا</b><p className="mt-4 flex items-center gap-2 text-sm text-white/55"><MessageCircle className="h-4 w-4" /> لخدمة العملاء والاستفسارات</p><div className="mt-3 flex flex-wrap gap-4 text-xs text-white/40"><Link href="/auth">حسابك</Link><Link href="/teachers">المعلمون</Link></div></div></div></footer>
 
       {onboardingOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-[#182431]/60 p-4 backdrop-blur-sm"><div role="dialog" aria-modal="true" aria-labelledby="onboarding-title" className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-[1.75rem] bg-[#fbf8f4] p-6 shadow-2xl sm:p-8"><div className="flex items-start justify-between"><div><span className="text-xs font-bold text-[#c35a00]">خطوة {Math.min(step + 1, 9)} من ٩ · ملف تعلّم مبدئي</span><h2 id="onboarding-title" className="mt-2 text-2xl font-bold">{step < 9 ? "لنجد نقطة البداية المناسبة لك" : "هذه بداية ملف تعلمك"}</h2></div><button aria-label="إغلاق" onClick={() => setOnboardingOpen(false)} className="rounded-xl p-2 hover:bg-white"><X /></button></div><div className="mt-5 h-2 rounded-full bg-[#182431]/10"><div className="h-2 rounded-full bg-[#ff7a00] transition-all" style={{ width: `${Math.min(100, (step / 9) * 100)}%` }} /></div>{step < 9 ? <><p className="mt-8 text-xl font-bold">{current[0]}</p><div className="mt-5 grid gap-3 sm:grid-cols-2">{current[2].map((option) => <button key={option} onClick={() => { update(current[1] as keyof Onboarding, option); setStep((value) => value + 1); }} className="rounded-2xl border border-[#182431]/10 bg-white p-4 text-right font-semibold transition hover:-translate-y-0.5 hover:border-[#ff7a00] hover:bg-[#fff4e9]">{option}</button>)}</div><div className="mt-8 flex justify-between"><button disabled={step === 0} onClick={() => setStep((value) => value - 1)} className="rounded-full border border-[#182431]/15 px-5 py-2 text-sm font-bold disabled:opacity-30">السابق</button><span className="self-center text-xs text-[#182431]/45">يمكنك العودة لتغيير إجاباتك</span></div></> : <OnboardingResult data={onboarding} onClose={() => setOnboardingOpen(false)} />}</div></div>}
     </div>
