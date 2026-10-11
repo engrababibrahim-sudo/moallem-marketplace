@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getOnboardingProgress } from "../../../shared/onboarding";
 import { Link, useLocation } from "wouter";
 import {
