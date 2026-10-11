@@ -85,20 +85,20 @@ export default function Teachers() {
       ].join(" ").toLowerCase();
 
       const matchesQuery = !q || text.includes(q);
+      const normalizeArabic = (value: string) =>
+        value.trim().toLowerCase()
+          .replace(/[ـ\s_-]+/g, "")
+          .replace(/[أإآ]/g, "ا")
+          .replace(/ى/g, "ي");
       const normalizeSubject = (value: string) => {
-        const normalized = value.trim().toLowerCase().replace(/[ـ\s_-]+/g, "");
+        const normalized = normalizeArabic(value);
         const aliases: Record<string, string> = {
-          english: "لغةإنجليزية",
-          englishlanguage: "لغةإنجليزية",
-          "لغةانجليزية": "لغةإنجليزية",
-          "اللغةانجليزية": "لغةإنجليزية",
-          "لغةالانجليزية": "لغةإنجليزية",
-          "اللغةالإنجليزية": "لغةإنجليزية",
-          "لغةالإنجليزية": "لغةإنجليزية",
-          "انجليزي": "لغةإنجليزية",
-          "إنجليزي": "لغةإنجليزية",
-          "انجليزية": "لغةإنجليزية",
-          "إنجليزية": "لغةإنجليزية",
+          english: "لغةانجليزية",
+          englishlanguage: "لغةانجليزية",
+          "لغةانجليزية": "لغةانجليزية",
+          "اللغةانجليزية": "لغةانجليزية",
+          "انجليزي": "لغةانجليزية",
+          "انجليزية": "لغةانجليزية",
           arabic: "لغةعربية",
           arabiclanguage: "لغةعربية",
           "اللغةالعربية": "لغةعربية",
@@ -106,17 +106,19 @@ export default function Teachers() {
           "عربية": "لغةعربية",
           math: "رياضيات",
           mathematics: "رياضيات",
-          computer: "حاسبآلي",
+          computer: "حاسبالي",
           computerscience: "علومالحاسب",
-          quran: "قرآنكريم",
+          quran: "قرانكريم",
           tajweed: "تجويد",
         };
         return aliases[normalized] || normalized;
       };
       const normalizeStage = (value: string) => {
-        const normalized = value.trim().toLowerCase();
+        const normalized = value.trim().toLowerCase()
+          .replace(/[أإآ]/g, "ا")
+          .replace(/ى/g, "ي");
         if (normalized.includes("ابتدائي") || normalized.includes("primary") || normalized.includes("elementary")) return "ابتدائي";
-        if (normalized.includes("إعدادي") || normalized.includes("اعدادي") || normalized.includes("preparatory") || normalized.includes("middle")) return "إعدادي";
+        if (normalized.includes("اعدادي") || normalized.includes("preparatory") || normalized.includes("middle")) return "اعدادي";
         if (normalized.includes("ثانوي") || normalized.includes("secondary") || normalized.includes("high school")) return "ثانوي";
         if (normalized.includes("جامعي") || normalized.includes("university") || normalized.includes("college")) return "جامعي";
         return normalized;
