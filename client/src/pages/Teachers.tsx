@@ -34,7 +34,6 @@ export default function Teachers() {
   const [query, setQuery] = useState("");
   const [subject, setSubject] = useState("");
   const [stage, setStage] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
   const [currency, setCurrency] = useState("");
   const [country, setCountry] = useState("");
   const subjectOptions = stage ? (subjectsByStage[stage] ?? allSubjects) : allSubjects;
@@ -50,7 +49,6 @@ export default function Teachers() {
       requestedStage.includes("جامعي") ? "جامعي" :
       stages.includes(requestedStage) ? requestedStage : ""
     );
-    setMaxPrice("");
     setQuery(params.get("q") || "");
     setCurrency(params.get("currency") || "");
     setCountry(params.get("country") || "");
