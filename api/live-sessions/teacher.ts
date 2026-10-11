@@ -1,8 +1,58 @@
 import { createClient } from "@supabase/supabase-js";
 
+type ZoomToken = { access_token?: string };
+type ZoomMeetingDetails = { start_url?: string };
+
 function json(res: any, status: number, body: unknown) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   return res.status(status).json(body);
+}
+
+async function getZoomToken(): Promise<string> {
+  const accountId = process.env.ZOOM_ACCOUNT_ID;
+  const clientId = process.env.ZOOM_CLIENT_ID;
+  const clientSecret = process.env.ZOOM_CLIENT_SECRET;
+  if (!accountId || !clientId || !clientSecret) {
+    throw new Error("Zoom credentials are not configured.");
+  }
+  const basic = Buffer.from(clientId + ":" + clientSecret).toString("base64");
+  const response = await fetch(
+    "https://zoom.us/oauth/token?grant_type=account_credentials&account_id=" +
+      encodeURIComponent(accountId),
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Basic " + basic,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    }
+  );
+  const data = (await response.json().catch(() => null)) as ZoomToken | null;
+  if (!response.ok || !data?.access_token) {
+    console.error("Zoom OAuth error while refreshing host links", response.status);
+    throw new Error("Unable to authenticate with Zoom.");
+  }
+  return data.access_token;
+}
+
+async function refreshHostUrl(token: string, meetingId: string, savedUrl: string | null) {
+  try {
+    // Zoom start_url links are temporary. Fetch the meeting details when the teacher opens
+    // the portal so the page can use the latest host start URL instead of a stale saved URL.
+    const response = await fetch(
+      "https://api.zoom.us/v2/meetings/" + encodeURIComponent(meetingId),
+      { headers: { Authorization: "Bearer " + token } }
+    );
+    const data = (await response.json().catch(() => null)) as ZoomMeetingDetails | null;
+    if (!response.ok) {
+      console.error("Zoom host URL refresh failed", response.status, meetingId);
+      return savedUrl;
+    }
+    return data?.start_url || savedUrl;
+  } catch (error) {
+    console.error("Zoom host URL refresh request failed", meetingId, error);
+    return savedUrl;
+  }
 }
 
 export default async function handler(req: any, res: any) {
@@ -36,17 +86,53 @@ export default async function handler(req: any, res: any) {
     if (!ids.length) return json(res, 200, { sessions: [] });
 
     const [{ data: sessions, error: sessionsError }, { data: segments, error: segmentsError }] = await Promise.all([
-      admin.from("live_sessions").select("id,booking_id,provider,join_url,host_url,status,scheduled_start_at,scheduled_end_at").in("booking_id", ids),
-      admin.from("live_session_segments").select("booking_id,join_url,host_url,scheduled_start_at,scheduled_end_at,status").in("booking_id", ids).eq("segment_number", 2),
+      admin.from("live_sessions").select("id,booking_id,provider,provider_meeting_id,join_url,host_url,status,scheduled_start_at,scheduled_end_at").in("booking_id", ids),
+      admin.from("live_session_segments").select("booking_id,provider_meeting_id,join_url,host_url,scheduled_start_at,scheduled_end_at,status").in("booking_id", ids).eq("segment_number", 2),
     ]);
     if (sessionsError) throw sessionsError;
     if (segmentsError) console.warn("Teacher continuation links unavailable; migration may be pending", segmentsError.message);
-    const continuationByBooking = Object.fromEntries((segments ?? []).map((s: any) => [s.booking_id, s]));
-    return json(res, 200, { sessions: (sessions ?? []).map((s: any) => {
+
+    // Get fresh host start URLs when possible. A failed refresh leaves the stored URL as fallback.
+    let zoomToken: string | null = null;
+    const needsRefresh = [...(sessions ?? []), ...(segments ?? [])].some((s: any) => s.provider_meeting_id);
+    if (needsRefresh && process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID && process.env.ZOOM_CLIENT_SECRET) {
+      try {
+        zoomToken = await getZoomToken();
+      } catch (error) {
+        console.error("Unable to refresh Zoom host URLs", error);
+      }
+    }
+
+    const refreshedSessions = await Promise.all((sessions ?? []).map(async (s: any) => {
+      const hostUrl = zoomToken && s.provider_meeting_id
+        ? await refreshHostUrl(zoomToken, String(s.provider_meeting_id), s.host_url ?? null)
+        : (s.host_url ?? null);
+      if (hostUrl && hostUrl !== s.host_url) {
+        const { error } = await admin.from("live_sessions").update({ host_url: hostUrl }).eq("id", s.id);
+        if (error) console.warn("Unable to persist refreshed Zoom host URL", error.message);
+      }
+      return { ...s, host_url: hostUrl, join_url: undefined };
+    }));
+
+    const refreshedSegments = await Promise.all((segments ?? []).map(async (s: any) => {
+      const hostUrl = zoomToken && s.provider_meeting_id
+        ? await refreshHostUrl(zoomToken, String(s.provider_meeting_id), s.host_url ?? null)
+        : (s.host_url ?? null);
+      if (hostUrl && hostUrl !== s.host_url) {
+        const { error } = await admin.from("live_session_segments")
+          .update({ host_url: hostUrl })
+          .eq("booking_id", s.booking_id)
+          .eq("segment_number", 2);
+        if (error) console.warn("Unable to persist refreshed continuation host URL", error.message);
+      }
+      return { ...s, host_url: hostUrl };
+    }));
+
+    const continuationByBooking = Object.fromEntries(refreshedSegments.map((s: any) => [s.booking_id, s]));
+    return json(res, 200, { sessions: refreshedSessions.map((s: any) => {
       const continuation = continuationByBooking[s.booking_id];
       return {
         ...s,
-        join_url: undefined,
         continuation_join_url: undefined,
         continuation_host_url: continuation?.host_url ?? null,
         continuation_scheduled_start_at: continuation?.scheduled_start_at ?? null,
