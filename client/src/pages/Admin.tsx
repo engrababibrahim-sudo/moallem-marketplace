@@ -159,10 +159,10 @@ function Dashboard(){
     </section>
 
     <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="المستخدمون" value={s.users} compare="إجمالي حسابات المنصة" icon={Users} tone="blue" loading={loading}/>
-      <StatCard label="المعلمون" value={s.teachers} compare="معلمون معتمدون" icon={UserCheck} tone="green" loading={loading}/>
-      <StatCard label="طلبات المراجعة" value={s.pending} compare="تحتاج إلى إجراء" icon={ClipboardCheck} tone="orange" loading={loading}/>
-      <StatCard label="الحجوزات" value={s.bookings} compare={s.paidBookings+" مدفوعة"} icon={CalendarDays} tone="purple" loading={loading}/>
+      <StatCard href="/admin/users" label="المستخدمون" value={s.users} compare="إجمالي حسابات المنصة · اضغط للفتح" icon={Users} tone="blue" loading={loading}/>
+      <StatCard href="/admin/teachers" label="المعلمون" value={s.teachers} compare="معلمون معتمدون · اضغط للفتح" icon={UserCheck} tone="green" loading={loading}/>
+      <StatCard href="/admin/teachers" label="طلبات المراجعة" value={s.pending} compare="تحتاج إلى إجراء · اضغط للفتح" icon={ClipboardCheck} tone="orange" loading={loading}/>
+      <StatCard href="/admin/bookings" label="الحجوزات" value={s.bookings} compare={s.paidBookings+" مدفوعة · اضغط للفتح"} icon={CalendarDays} tone="purple" loading={loading}/>
     </div>
     <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-[22px] border border-[#dfe8f2] bg-gradient-to-l from-[#eafff5] to-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-[#7b8da5]">المدفوعات</p><strong className="mt-2 block text-lg font-black text-[#142a57]">{s.paidBookings} حجز مدفوع</strong></div><CircleDollarSign className="h-6 w-6 text-[#18a86b]"/></div><div className="mt-4 flex flex-wrap gap-2">{Object.keys(s.paidByCurrency).length===0?<span className="text-[10px] font-bold text-[#8da0b9]">لا توجد مدفوعات مسجلة.</span>:Object.entries(s.paidByCurrency).map(([currency,total])=><span key={currency} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-[#16845b] shadow-sm">{Number(total??0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2})} {currency}</span>)}</div></div><div className="rounded-[22px] border border-[#dfe8f2] bg-gradient-to-l from-[#fff6e8] to-white p-5 shadow-sm"><p className="text-xs font-bold text-[#7b8da5]">تنبيه إداري</p><strong className="mt-2 block text-lg font-black text-[#142a57]">{s.pending>0?"هناك طلبات معلمين تحتاج مراجعة":"لا توجد طلبات معلقة الآن"}</strong><p className="mt-2 text-[10px] font-bold text-[#d97706]">{s.pending>0?"افتح قسم طلبات المعلمين لمراجعتها.":"المنصة لا تحتاج إجراءً عاجلًا حاليًا."}</p></div></div>
 
@@ -215,9 +215,9 @@ function Dashboard(){
   </>;
 }
 
-function StatCard({label,value,compare,icon:Icon,tone,loading}:{label:string;value:number;compare:string;icon:any;tone:"blue"|"green"|"orange"|"purple";loading:boolean}){
+function StatCard({href,label,value,compare,icon:Icon,tone,loading}:{href:string;label:string;value:number;compare:string;icon:any;tone:"blue"|"green"|"orange"|"purple";loading:boolean}){
  const styles={blue:["#eaf4ff","#2d7ff9"],green:["#eafff5","#18a86b"],orange:["#fff4df","#f59e0b"],purple:["#f2edff","#8b5cf6"]}[tone];
- return <div className="group rounded-[22px] border border-[#dfe8f2] bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"><div className="flex items-start justify-between"><span className="grid h-12 w-12 place-items-center rounded-2xl" style={{background:styles[0]}}><Icon className="h-5 w-5" style={{color:styles[1]}}/></span><ChevronLeft className="h-4 w-4 text-[#b2bfd0] transition group-hover:-translate-x-1"/></div><p className="mt-5 text-xs font-bold text-[#7b8da5]">{label}</p><strong className="mt-1 block text-3xl font-black text-[#142a57]">{loading?"—":Number(value ?? 0).toLocaleString()}</strong><p className="mt-2 text-[10px] font-bold" style={{color:styles[1]}}>{compare}</p></div>;
+ return <Link href={href} aria-label={label+" - "+compare} className="group block rounded-[22px] border border-[#dfe8f2] bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-[#b9d5ff] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#3974ff]"><div className="flex items-start justify-between"><span className="grid h-12 w-12 place-items-center rounded-2xl" style={{background:styles[0]}}><Icon className="h-5 w-5" style={{color:styles[1]}}/></span><ChevronLeft className="h-4 w-4 text-[#b2bfd0] transition group-hover:-translate-x-1"/></div><p className="mt-5 text-xs font-bold text-[#7b8da5]">{label}</p><strong className="mt-1 block text-3xl font-black text-[#142a57]">{loading?"—":Number(value ?? 0).toLocaleString()}</strong><p className="mt-2 text-[10px] font-bold" style={{color:styles[1]}}>{compare}</p></Link>;
 }
 
 function MiniChart({userTrend,bookingTrend,teacherTrend}:{userTrend:number[];bookingTrend:number[];teacherTrend:number[]}){
