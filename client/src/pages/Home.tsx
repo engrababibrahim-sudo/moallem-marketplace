@@ -160,6 +160,16 @@ export default function Home() {
     step === 3 ? (subjectsByStage[onboarding.stage] ?? []) :
     current?.[2] ?? [];
   const completed = Math.round((getOnboardingProgress(onboarding, 9) / 100) * 9);
+  const searchSubjectOptions =
+    search.grade === "ابتدائي"
+      ? ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية"]
+      : search.grade === "إعدادي"
+        ? ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي"]
+        : search.grade === "ثانوي"
+          ? ["لغة عربية", "لغة إنجليزية", "رياضيات", "فيزياء", "كيمياء", "أحياء", "جيولوجيا", "تاريخ", "جغرافيا", "فلسفة ومنطق", "علم نفس واجتماع"]
+          : search.grade === "جامعي"
+            ? ["رياضيات", "فيزياء", "كيمياء", "أحياء", "برمجة", "تكنولوجيا المعلومات", "علوم الحاسب", "لغة إنجليزية", "لغة عربية"]
+            : ["رياضيات", "لغة عربية", "لغة إنجليزية", "علوم", "دراسات اجتماعية", "فيزياء", "كيمياء", "برمجة", "تكنولوجيا المعلومات", "علوم الحاسب"];
 
   const findTeachers = () => {
     const params = new URLSearchParams();
@@ -270,8 +280,8 @@ export default function Home() {
           <div id="teacher-search" className="relative z-20 mt-14 rounded-[1.75rem] border border-white bg-white p-4 shadow-[0_20px_55px_-35px_rgba(24,36,49,.38)] sm:p-5 lg:mt-20">
             <div className="mb-4 flex items-center gap-2 px-1"><span className="grid h-8 w-8 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Search className="h-4 w-4" /></span><div><b className="block text-sm">ابدأ البحث عن معلم</b><span className="text-[11px] text-[#182431]/50">اختر ما يناسبك — ويمكنك تعديل التصفية لاحقًا</span></div></div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              <SearchSelect label="المرحلة" value={search.grade} onChange={(grade) => setSearch((s) => ({ ...s, grade }))} options={["ابتدائي", "إعدادي", "ثانوي", "جامعي"]} placeholder="كل المراحل" />
-              <SearchSelect label="المادة" value={search.subject} onChange={(subject) => setSearch((s) => ({ ...s, subject }))} options={["رياضيات", "لغة عربية", "لغة إنجليزية", "فيزياء", "كيمياء", "علوم", "برمجة", "تكنولوجيا المعلومات", "علوم الحاسب"]} placeholder="اختر المادة" />
+              <SearchSelect label="المرحلة" value={search.grade} onChange={(grade) => setSearch((s) => ({ ...s, grade, subject: "" }))} options={["ابتدائي", "إعدادي", "ثانوي", "جامعي"]} placeholder="كل المراحل" />
+              <SearchSelect label="المادة" value={search.subject} onChange={(subject) => setSearch((s) => ({ ...s, subject }))} options={searchSubjectOptions} placeholder="اختر المادة" />
               <SearchSelect label="الدولة" value={search.country} onChange={(country) => setSearch((s) => ({ ...s, country }))} options={["مصر", "السعودية", "الإمارات", "الكويت", "الأردن"]} placeholder="اختر الدولة" />
               <SearchSelect label="نوع الدرس" value={search.format} onChange={(format) => setSearch((s) => ({ ...s, format }))} options={["فردي مباشر", "تجربة تعريفية", "مراجعة اختبار"]} placeholder="كل الأنواع" />
               <SearchSelect label="السعر" value={search.price} onChange={(price) => setSearch((s) => ({ ...s, price }))} options={["حتى ٣٠٠ ج.م", "حتى ٥٠٠ ج.م", "حتى ٧٠٠ ج.م"]} placeholder="كل الأسعار" />
@@ -386,5 +396,9 @@ function FooterGroup({ title, links }: { title: string; links: [string, string][
 }
 
 function OnboardingResult({ data, onClose }: { data: Onboarding; onClose: () => void }) {
-  return <div className="mt-8"><div className="rounded-2xl bg-[#fff0e2] p-5"><div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#ff7a00] text-white"><Check /></span><div><b>اكتملت تفضيلات البحث</b><p className="mt-1 text-sm leading-6 text-[#182431]/60">راجع اختياراتك ثم انتقل إلى قائمة المعلمين. يمكنك تسجيل الدخول لحفظ بيانات حسابك ومتابعة الحجوزات.</p></div></div><div className="mt-4 flex flex-wrap gap-2">{[data.role, data.stage, data.grade, data.subject, data.goal, data.time].filter(Boolean).map((item) => <span key={item} className="rounded-full bg-white px-3 py-1 text-xs font-semibold">{item}</span>)}</div></div><div className="mt-6 rounded-2xl border border-[#182431]/10 bg-white p-5"><h3 className="font-bold">الخطوة التالية</h3><p className="mt-2 text-sm leading-7 text-[#182431]/60">انتقل إلى قائمة المعلمين المتاحة، وراجع التفاصيل قبل إرسال طلب الحجز.</p><div className="mt-5 flex flex-wrap gap-3"><Link href="/teachers" onClick={onClose} className="rounded-full bg-[#ff7a00] px-5 py-3 text-center text-sm font-bold text-white">استكشف المعلمين</Link><button onClick={onClose} className="rounded-full border border-[#182431]/15 px-5 py-3 text-sm font-bold">إغلاق</button></div></div></div>;
+  const teacherSearchParams = new URLSearchParams();
+  if (data.subject) teacherSearchParams.set("subject", data.subject);
+  if (data.grade || data.stage) teacherSearchParams.set("grade", data.grade || data.stage);
+  const teacherSearchHref = `/teachers?${teacherSearchParams.toString()}`;
+  return <div className="mt-8"><div className="rounded-2xl bg-[#fff0e2] p-5"><div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#ff7a00] text-white"><Check /></span><div><b>اكتملت تفضيلات البحث</b><p className="mt-1 text-sm leading-6 text-[#182431]/60">راجع اختياراتك ثم انتقل إلى قائمة المعلمين. يمكنك تسجيل الدخول لحفظ بيانات حسابك ومتابعة الحجوزات.</p></div></div><div className="mt-4 flex flex-wrap gap-2">{[data.role, data.stage, data.grade, data.subject, data.goal, data.time].filter(Boolean).map((item) => <span key={item} className="rounded-full bg-white px-3 py-1 text-xs font-semibold">{item}</span>)}</div></div><div className="mt-6 rounded-2xl border border-[#182431]/10 bg-white p-5"><h3 className="font-bold">الخطوة التالية</h3><p className="mt-2 text-sm leading-7 text-[#182431]/60">انتقل إلى قائمة المعلمين المتاحة، وراجع التفاصيل قبل إرسال طلب الحجز.</p><div className="mt-5 flex flex-wrap gap-3"><Link href={teacherSearchHref} onClick={onClose} className="rounded-full bg-[#ff7a00] px-5 py-3 text-center text-sm font-bold text-white">استكشف المعلمين المطابقين</Link><button onClick={onClose} className="rounded-full border border-[#182431]/15 px-5 py-3 text-sm font-bold">إغلاق</button></div></div></div>;
 }
