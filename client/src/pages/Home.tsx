@@ -396,9 +396,6 @@ function FooterGroup({ title, links }: { title: string; links: [string, string][
 }
 
 function OnboardingResult({ data, onClose }: { data: Onboarding; onClose: () => void }) {
-  const teacherSearchParams = new URLSearchParams();
-  if (data.subject) teacherSearchParams.set("subject", data.subject);
-  if (data.grade || data.stage) teacherSearchParams.set("grade", data.grade || data.stage);
-  const teacherSearchHref = `/teachers?${teacherSearchParams.toString()}`;
+  const teacherSearchHref = "/teachers";
   return <div className="mt-8"><div className="rounded-2xl bg-[#fff0e2] p-5"><div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#ff7a00] text-white"><Check /></span><div><b>اكتملت تفضيلات البحث</b><p className="mt-1 text-sm leading-6 text-[#182431]/60">راجع اختياراتك ثم انتقل إلى قائمة المعلمين. يمكنك تسجيل الدخول لحفظ بيانات حسابك ومتابعة الحجوزات.</p></div></div><div className="mt-4 flex flex-wrap gap-2">{[data.role, data.stage, data.grade, data.subject, data.goal, data.time].filter(Boolean).map((item) => <span key={item} className="rounded-full bg-white px-3 py-1 text-xs font-semibold">{item}</span>)}</div></div><div className="mt-6 rounded-2xl border border-[#182431]/10 bg-white p-5"><h3 className="font-bold">الخطوة التالية</h3><p className="mt-2 text-sm leading-7 text-[#182431]/60">انتقل إلى قائمة المعلمين المتاحة، وراجع التفاصيل قبل إرسال طلب الحجز.</p><div className="mt-5 flex flex-wrap gap-3"><Link href={teacherSearchHref} onClick={onClose} className="rounded-full bg-[#ff7a00] px-5 py-3 text-center text-sm font-bold text-white">استكشف المعلمين المطابقين</Link><button onClick={onClose} className="rounded-full border border-[#182431]/15 px-5 py-3 text-sm font-bold">إغلاق</button></div></div></div>;
 }
