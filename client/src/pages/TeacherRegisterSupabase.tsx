@@ -31,6 +31,10 @@ export default function TeacherRegisterSupabase() {
   const [status, setStatus] = useState<"idle"|"saving"|"submitting">("idle");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
+  const [hasTeacherProfile, setHasTeacherProfile] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [loadingTeacherProfile, setLoadingTeacherProfile] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) { navigate("/auth"); return; }
@@ -40,37 +44,73 @@ export default function TeacherRegisterSupabase() {
   }, [loading, user, profile, navigate]);
 
   useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("teacher_profiles")
-      .select("bio,qualification,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate,currency,verification_status,rejection_reason")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!data) return;
+    if (!user) {
+      setLoadingTeacherProfile(false);
+      return;
+    }
+
+    let cancelled = false;
+    const loadTeacherProfile = async () => {
+      setLoadingTeacherProfile(true);
+      setError("");
+      const [{ data: account }, { data: teacher, error: teacherLoadError }] = await Promise.all([
+        supabase.from("profiles").select("full_name,phone,city,country").eq("id", user.id).maybeSingle(),
+        supabase.from("teacher_profiles")
+          .select("display_name,bio,qualification,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate,currency,verification_status,rejection_reason")
+          .eq("id", user.id).maybeSingle(),
+      ]);
+
+      if (cancelled) return;
+      if (teacherLoadError) {
+        setError("تعذر تحميل ملف المعلم. " + teacherLoadError.message);
+        setLoadingTeacherProfile(false);
+        return;
+      }
+
+      if (account) {
         setForm(f => ({
           ...f,
-          country: profile?.country ?? "مصر",
-          currency: data.currency ?? "EGP",
-          bio: data.bio ?? "",
-          qualification: data.qualification ?? "",
-          specialization: data.specialization ?? "",
-          years_experience: String(data.years_experience ?? 0),
-          subjects: (data.subjects ?? []).join(", "),
-          education_stages: (data.education_stages ?? []).join(", "),
-          grades: (data.grades ?? []).join(", "),
-          teaching_format: data.teaching_format ?? "",
-          hourly_rate: data.hourly_rate == null ? "" : String(data.hourly_rate),
+          full_name: account.full_name ?? teacher?.display_name ?? "",
+          phone: account.phone ?? "",
+          city: account.city ?? "",
+          country: account.country ?? "مصر",
         }));
-        if (data.verification_status === "approved") setMessage("تم اعتماد ملفك. سيظهر للطلاب في سوق المعلمين.");
-        if (data.verification_status === "pending") setMessage("تم إرسال ملفك للمراجعة. لا يظهر الملف في السوق قبل الاعتماد.");
-        if (data.verification_status === "rejected" && data.rejection_reason) setMessage("ملاحظات المراجعة: " + data.rejection_reason);
-      });
-  }, [user, profile?.country]);
+      }
+      if (teacher) {
+        setHasTeacherProfile(true);
+        setVerificationStatus(teacher.verification_status ?? null);
+        setForm(f => ({
+          ...f,
+          full_name: account?.full_name ?? teacher.display_name ?? f.full_name,
+          currency: teacher.currency ?? "EGP",
+          bio: teacher.bio ?? "",
+          qualification: teacher.qualification ?? "",
+          specialization: teacher.specialization ?? "",
+          years_experience: String(teacher.years_experience ?? 0),
+          subjects: (teacher.subjects ?? []).join(", "),
+          education_stages: (teacher.education_stages ?? []).join(", "),
+          grades: (teacher.grades ?? []).join(", "),
+          teaching_format: teacher.teaching_format ?? "",
+          hourly_rate: teacher.hourly_rate == null ? "" : String(teacher.hourly_rate),
+        }));
+        if (teacher.verification_status === "approved") setMessage("ملفك معتمد ويظهر للطلاب في سوق المعلمين.");
+        else if (teacher.verification_status === "pending") setMessage("ملفك قيد المراجعة. سيظهر للطلاب بعد اعتماد الإدارة.");
+        else if (teacher.verification_status === "rejected") setMessage("يحتاج ملفك إلى تعديل قبل إعادة إرساله للمراجعة." + (teacher.rejection_reason ? " ملاحظات الإدارة: " + teacher.rejection_reason : ""));
+      } else {
+        setHasTeacherProfile(false);
+        setVerificationStatus(null);
+      }
+      setLoadingTeacherProfile(false);
+    };
+
+    void loadTeacherProfile();
+    return () => { cancelled = true; };
+  }, [user]);
 
   if (loading) return <div dir="rtl" className="grid min-h-screen place-items-center bg-[#fbf8f4]">جارٍ التحميل...</div>;
   if (!user) return null;
-  if (error) return <div dir="rtl" className="grid min-h-screen place-items-center bg-[#fbf8f4] p-6"><div className="rounded-3xl bg-white p-8 text-center shadow-sm"><p className="font-bold text-red-600">{error}</p><Link href="/" className="mt-5 inline-block rounded-full bg-[#182431] px-6 py-3 text-sm font-bold text-white">الرئيسية</Link></div></div>;
+  if (loadingTeacherProfile) return <div dir="rtl" className="grid min-h-screen place-items-center bg-[#fbf8f4] text-[#182431]">جارٍ تحميل بيانات ملفك...</div>;
+  if (error && !hasTeacherProfile) return <div dir="rtl" className="grid min-h-screen place-items-center bg-[#fbf8f4] p-6"><div className="rounded-3xl bg-white p-8 text-center shadow-sm"><p className="font-bold text-red-600">{error}</p><Link href="/" className="mt-5 inline-block rounded-full bg-[#182431] px-6 py-3 text-sm font-bold text-white">الرئيسية</Link></div></div>;
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -103,7 +143,9 @@ export default function TeacherRegisterSupabase() {
     const { error: teacherError } = await supabase.from("teacher_profiles").upsert(payload);
     if (teacherError) { setError(teacherError.message); setStatus("idle"); return; }
 
+    setHasTeacherProfile(true);
     setMessage("تم حفظ الملف بنجاح.");
+    setEditMode(false);
     setStatus("idle");
   };
 
@@ -112,7 +154,11 @@ export default function TeacherRegisterSupabase() {
     const { error: e } = await supabase.from("teacher_profiles")
       .update({ verification_status:"pending", rejection_reason:null }).eq("id", user.id);
     if (e) setError(e.message);
-    else setMessage("تم إرسال طلبك للمراجعة. سيظهر الملف للطلاب بعد اعتماد الإدارة.");
+    else {
+      setVerificationStatus("pending");
+      setMessage("تم إرسال طلبك للمراجعة. سيظهر الملف للطلاب بعد اعتماد الإدارة.");
+      setEditMode(false);
+    }
     setStatus("idle");
   };
 
@@ -126,10 +172,24 @@ export default function TeacherRegisterSupabase() {
       </header>
 
       <div className="mx-auto max-w-4xl px-5 py-8 lg:py-12">
+        {hasTeacherProfile && verificationStatus === "approved" && !editMode ? (
+          <section className="rounded-[2rem] bg-white p-8 text-center shadow-sm lg:p-12">
+            <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><CheckCircle2 className="h-8 w-8" /></span>
+            <p className="mt-5 text-sm font-bold text-emerald-700">ملف معتمد</p>
+            <h1 className="mt-2 text-3xl font-extrabold">أهلًا {form.full_name || "بك"}</h1>
+            <p className="mx-auto mt-3 max-w-xl leading-8 text-black/60">ملفك كمعلم معتمد ومتاح للطلاب في سوق المعلمين. يمكنك الانتقال إلى لوحة التحكم لإدارة حجوزاتك ومواعيدك، أو تعديل بيانات ملفك عند الحاجة.</p>
+            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link href="/portal" className="rounded-full bg-[#182431] px-7 py-3.5 font-bold text-white">لوحة المعلم</Link>
+              <Link href="/teacher/bookings" className="rounded-full border border-black/10 px-7 py-3.5 font-bold">الحجوزات</Link>
+              <button type="button" onClick={() => { setEditMode(true); setMessage("يمكنك تعديل بياناتك ثم حفظ التغييرات."); }} className="rounded-full bg-[#ff7a00] px-7 py-3.5 font-bold text-white">تعديل الملف</button>
+            </div>
+          </section>
+        ) : (
+        <>
         <div className="rounded-[2rem] bg-[#182431] p-7 text-white lg:p-10">
           <ShieldCheck className="text-[#ffb36e]"/>
-          <h1 className="mt-4 text-3xl font-extrabold">أنشئ ملفك كمعلم</h1>
-          <p className="mt-3 text-sm leading-7 text-white/65">أكمل بياناتك ثم أرسل الطلب للمراجعة. لن يظهر ملفك للطلاب قبل الاعتماد.</p>
+          <h1 className="mt-4 text-3xl font-extrabold">{hasTeacherProfile ? "تحديث ملفك كمعلم" : "أنشئ ملفك كمعلم"}</h1>
+          <p className="mt-3 text-sm leading-7 text-white/65">{hasTeacherProfile ? "بياناتك المحفوظة محمّلة هنا. عدّل ما تحتاج إليه ثم احفظ التغييرات." : "أكمل بياناتك ثم أرسل الطلب للمراجعة. لن يظهر ملفك للطلاب قبل الاعتماد."}</p>
         </div>
 
         {message && <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700"><CheckCircle2 className="ml-2 inline h-4 w-4"/>{message}</div>}
@@ -174,6 +234,8 @@ export default function TeacherRegisterSupabase() {
             <Send className="h-4 w-4"/>{status === "submitting" ? "جارٍ الإرسال..." : "إرسال للمراجعة"}
           </button>
         </form>
+        </>
+        )}
       </div>
     </main>
   );
