@@ -93,7 +93,7 @@ export default function Admin(){
       </header>
 
       <main className="mx-auto max-w-[1540px] p-5 lg:p-8">
-        {location==="/admin"?<Dashboard/>:location==="/admin/users"?<UsersAdmin/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:<Inactive title={title}/>}
+        {location==="/admin"?<Dashboard/>:location==="/admin/users"?<UsersAdmin/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:location==="/admin/bookings"?<AdminBookings/>:<Inactive title={title}/>}
       </main>
     </div>
   </div>;
@@ -333,4 +333,68 @@ function Students(){
 }
 
 function Info({label,value}:{label:string;value:any}){return <div className="rounded-2xl border border-[#e5ecf4] bg-[#f9fbfd] p-4"><span className="block text-[10px] font-bold text-[#8da0b9]">{label}</span><b className="mt-1 block text-sm text-[#17233a]">{value||"—"}</b></div>}
+
+function AdminBookings(){
+  type BookingRow={id:string;student_id:string;teacher_id:string;subject:string|null;start_at:string;end_at:string;timezone:string|null;total_price:number|null;currency:string|null;status:string;payment_status:string|null;created_at:string;notes:string|null;student_name?:string|null;student_email?:string|null;teacher_name?:string|null};
+  const [items,setItems]=useState<BookingRow[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState("");
+  const [search,setSearch]=useState("");
+  const [status,setStatus]=useState("all");
+  const [refresh,setRefresh]=useState(0);
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      setLoading(true);setError("");
+      const {data,error}=await supabase.from("bookings").select("id,student_id,teacher_id,subject,start_at,end_at,timezone,total_price,currency,status,payment_status,created_at,notes").order("created_at",{ascending:false});
+      if(!alive)return;
+      if(error){setError(error.message);setItems([]);setLoading(false);return;}
+      const rows=(data??[]) as BookingRow[];
+      const ids=[...new Set(rows.flatMap(x=>[x.student_id,x.teacher_id]).filter(Boolean))];
+      let profiles:{id:string;full_name:string|null;email:string|null}[]=[];
+      if(ids.length){
+        const p=await supabase.from("profiles").select("id,full_name,email").in("id",ids);
+        if(p.error){console.error("Could not load booking profile names",p.error);}
+        profiles=(p.data??[]) as typeof profiles;
+      }
+      const profileMap=new Map(profiles.map(x=>[x.id,x]));
+      const named=rows.map(x=>({...x,student_name:profileMap.get(x.student_id)?.full_name,student_email:profileMap.get(x.student_id)?.email,teacher_name:profileMap.get(x.teacher_id)?.full_name}));
+      if(alive)setItems(named);
+      setLoading(false);
+    })();
+    return ()=>{alive=false};
+  },[refresh]);
+  const statusNames:Record<string,string>={pending:"في انتظار التأكيد",confirmed:"مؤكد",cancelled:"ملغي",completed:"مكتمل",rejected:"مرفوض"};
+  const filtered=useMemo(()=>{
+    const q=search.trim().toLowerCase();
+    return items.filter(x=>(status==="all"||x.status===status)&&(!q||[x.student_name,x.student_email,x.teacher_name,x.subject,x.id].some(v=>String(v??"").toLowerCase().includes(q))));
+  },[items,search,status]);
+  const money=(x:BookingRow)=>x.total_price==null?"—":Number(x.total_price).toLocaleString("ar-EG",{maximumFractionDigits:2})+" "+(x.currency||"EGP");
+  const date=(x:BookingRow)=>{try{return new Intl.DateTimeFormat("ar-EG",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:x.timezone||"Africa/Cairo"}).format(new Date(x.start_at));}catch{return x.start_at;}};
+  return <section className="rounded-[26px] border border-[#dfe8f2] bg-white shadow-sm">
+    <div className="border-b border-[#e5ecf4] p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div><h2 className="text-xl font-black">إدارة الحجوزات</h2><p className="mt-2 text-xs text-[#8da0b9]">عرض حجوزات الطلاب مع المعلمين وحالة كل حجز وقيمته.</p></div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex items-center rounded-xl bg-[#f7faff] px-3 py-2.5"><Search className="h-4 w-4 text-[#8da0b9]"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث بالطالب أو المعلم أو المادة..." className="w-full min-w-48 bg-transparent px-2 text-xs outline-none"/></div>
+          <select value={status} onChange={e=>setStatus(e.target.value)} className="rounded-xl border border-[#e0e8f2] bg-white px-3 py-2.5 text-xs font-bold outline-none"><option value="all">كل الحالات</option><option value="pending">في انتظار التأكيد</option><option value="confirmed">مؤكد</option><option value="cancelled">ملغي</option><option value="completed">مكتمل</option><option value="rejected">مرفوض</option></select>
+          <button onClick={()=>setRefresh(x=>x+1)} className="rounded-xl bg-[#142a57] px-4 py-2.5 text-xs font-extrabold text-white">تحديث</button>
+        </div>
+      </div>
+    </div>
+    <div className="grid gap-3 p-6 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="rounded-2xl bg-[#f7faff] p-4"><p className="text-[10px] font-bold text-[#8da0b9]">إجمالي الحجوزات</p><b className="mt-1 block text-2xl font-black">{items.length}</b></div>
+      <div className="rounded-2xl bg-[#fff6e8] p-4"><p className="text-[10px] font-bold text-[#b96a00]">بانتظار التأكيد</p><b className="mt-1 block text-2xl font-black">{items.filter(x=>x.status==="pending").length}</b></div>
+      <div className="rounded-2xl bg-[#eafff5] p-4"><p className="text-[10px] font-bold text-[#16845b]">حجوزات مؤكدة</p><b className="mt-1 block text-2xl font-black">{items.filter(x=>x.status==="confirmed").length}</b></div>
+      <div className="rounded-2xl bg-[#eef4ff] p-4"><p className="text-[10px] font-bold text-[#3974ff]">نتائج العرض</p><b className="mt-1 block text-2xl font-black">{filtered.length}</b></div>
+    </div>
+    <div className="px-6 pb-6">
+      {loading?<div className="rounded-2xl bg-[#f8fbfd] p-10 text-center text-sm font-bold text-[#71849b]">جارٍ تحميل الحجوزات...</div>
+      :error?<div className="rounded-2xl bg-[#fff0f1] p-5 text-sm font-bold text-[#c3344b]"><p>تعذر تحميل الحجوزات من قاعدة البيانات.</p><p className="mt-2 break-words font-mono text-xs" dir="ltr">{error}</p><p className="mt-2 text-xs">إذا كانت الرسالة متعلقة بالصلاحيات (RLS)، فسنحتاج إلى ضبط سياسة القراءة لحسابات الإدارة.</p></div>
+      :filtered.length===0?<div className="rounded-2xl bg-[#f8fbfd] p-10 text-center"><CalendarDays className="mx-auto h-8 w-8 text-[#9aabc0]"/><h3 className="mt-3 font-extrabold">لا توجد حجوزات مطابقة</h3><p className="mt-1 text-xs text-[#8da0b9]">{items.length===0?"لم يتم تسجيل حجوزات بعد.":"جرّبي تغيير البحث أو حالة الحجز."}</p></div>
+      :<div className="overflow-x-auto rounded-2xl border border-[#e5ecf4]"><table className="w-full min-w-[900px] text-right text-xs"><thead className="bg-[#f8fbff] text-[#8da0b9]"><tr><th className="px-4 py-3">الطالب</th><th className="px-4 py-3">المعلم</th><th className="px-4 py-3">المادة</th><th className="px-4 py-3">موعد الدرس</th><th className="px-4 py-3">القيمة</th><th className="px-4 py-3">الدفع</th><th className="px-4 py-3">الحالة</th></tr></thead><tbody>{filtered.map(x=><tr key={x.id} className="border-t border-[#edf1f6] align-top"><td className="px-4 py-4"><b>{x.student_name||"طالب"}</b><span className="mt-1 block text-[10px] text-[#8da0b9]" dir="ltr">{x.student_email||""}</span></td><td className="px-4 py-4 font-bold">{x.teacher_name||"معلم"}</td><td className="px-4 py-4">{x.subject||"غير محددة"}</td><td className="px-4 py-4">{date(x)}<span className="mt-1 block text-[10px] text-[#8da0b9]">{x.timezone||"Africa/Cairo"}</span></td><td className="px-4 py-4 font-extrabold">{money(x)}</td><td className="px-4 py-4">{x.payment_status==="paid"?"مدفوع":x.payment_status==="unpaid"?"غير مدفوع":x.payment_status||"—"}</td><td className="px-4 py-4"><span className={"inline-flex rounded-full px-3 py-1 text-[10px] font-extrabold "+(x.status==="confirmed"?"bg-[#eafff5] text-[#16845b]":x.status==="pending"?"bg-[#fff4df] text-[#b96a00]":"bg-[#f1f5f9] text-[#52657d]")}>{statusNames[x.status]||x.status}</span></td></tr>)}</tbody></table></div>}
+    </div>
+  </section>;
+}
+
 function Inactive({title}:{title:string}){return <section className="rounded-[28px] border border-[#dfe8f2] bg-white p-8 shadow-sm"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#eef4ff]"><Settings className="h-6 w-6 text-[#3974ff]"/></div><p className="mt-6 text-[11px] font-extrabold text-[#3974ff]">قسم غير مفعّل</p><h2 className="mt-2 text-2xl font-black">{title}</h2><p className="mt-3 max-w-xl text-sm leading-7 text-[#71849b]">هذا القسم جاهز من ناحية الواجهة، وسنربطه ببيانات وإجراءات التشغيل الفعلية في المرحلة التالية.</p><Link href="/admin" className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[#142a57] px-5 py-3 text-sm font-bold text-white">العودة إلى الرئيسية <ChevronLeft className="h-4 w-4"/></Link></section>}
