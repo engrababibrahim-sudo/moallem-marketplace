@@ -32,7 +32,23 @@ async function fetchProfile(userId: string) {
     .eq("id", userId)
     .maybeSingle();
   if (error) throw error;
-  return data as Profile | null;
+  if (!data) return null;
+
+  // A teacher may have an approved teacher profile while the base profile still
+  // carries an older role (for example, from when the account was first created).
+  // Infer the teacher role only for non-admin accounts with an approved profile.
+  if (!["teacher", "admin", "super_admin", "support"].includes(data.role)) {
+    const { data: teacherProfile, error: teacherError } = await supabase
+      .from("teacher_profiles")
+      .select("id")
+      .eq("id", userId)
+      .eq("verification_status", "approved")
+      .maybeSingle();
+    if (teacherError) throw teacherError;
+    if (teacherProfile) return { ...data, role: "teacher" } as Profile;
+  }
+
+  return data as Profile;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
