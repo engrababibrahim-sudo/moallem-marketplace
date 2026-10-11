@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getOnboardingProgress } from "../../../shared/onboarding";
+import { trpc } from "@/lib/trpc";
 import { Link, useLocation } from "wouter";
 import {
   ArrowLeft,
