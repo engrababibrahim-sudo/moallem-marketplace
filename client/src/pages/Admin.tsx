@@ -93,7 +93,7 @@ export default function Admin(){
       </header>
 
       <main className="mx-auto max-w-[1540px] p-5 lg:p-8">
-        {location==="/admin"?<Dashboard/>:location==="/admin/users"?<UsersAdmin/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:location==="/admin/bookings"?<AdminBookings/>:<Inactive title={title}/>}
+        {location==="/admin"?<Dashboard/>:location==="/admin/users"?<UsersAdmin/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/parents"?<ParentsAdmin/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:location==="/admin/bookings"?<AdminBookings/>:<AdminSection title={title} location={location}/>}
       </main>
     </div>
   </div>;
@@ -397,4 +397,43 @@ function AdminBookings(){
   </section>;
 }
 
-function Inactive({title}:{title:string}){return <section className="rounded-[28px] border border-[#dfe8f2] bg-white p-8 shadow-sm"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#eef4ff]"><Settings className="h-6 w-6 text-[#3974ff]"/></div><p className="mt-6 text-[11px] font-extrabold text-[#3974ff]">قسم غير مفعّل</p><h2 className="mt-2 text-2xl font-black">{title}</h2><p className="mt-3 max-w-xl text-sm leading-7 text-[#71849b]">هذا القسم جاهز من ناحية الواجهة، وسنربطه ببيانات وإجراءات التشغيل الفعلية في المرحلة التالية.</p><Link href="/admin" className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[#142a57] px-5 py-3 text-sm font-bold text-white">العودة إلى الرئيسية <ChevronLeft className="h-4 w-4"/></Link></section>}
+
+function ParentsAdmin(){
+  const [items,setItems]=useState<any[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [search,setSearch]=useState("");
+  const [error,setError]=useState("");
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      const {data,error}=await supabase.from("profiles").select("id,full_name,email,phone,country,city,account_status,created_at").eq("role","parent").order("created_at",{ascending:false});
+      if(!alive)return;
+      if(error)setError(error.message);
+      setItems(data??[]);
+      setLoading(false);
+    })();
+    return ()=>{alive=false;};
+  },[]);
+  const filtered=useMemo(()=>{
+    const q=search.trim().toLowerCase();
+    return items.filter(x=>[x.full_name,x.email,x.phone,x.country,x.city].some(v=>String(v??"").toLowerCase().includes(q)));
+  },[items,search]);
+  return <section className="rounded-[26px] border border-[#dfe8f2] bg-white shadow-sm">
+    <div className="border-b border-[#e5ecf4] p-6"><h2 className="text-xl font-black">إدارة أولياء الأمور</h2><p className="mt-2 text-xs text-[#8da0b9]">قائمة أولياء الأمور المسجلين وبيانات التواصل وحالة الحساب.</p><div className="mt-4 flex items-center gap-2 rounded-xl bg-[#f7faff] px-3 py-3 sm:max-w-md"><Search className="h-4 w-4 text-[#8da0b9]"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث بالاسم أو البريد أو الهاتف..." className="w-full bg-transparent text-xs outline-none"/></div></div>
+    <div className="grid gap-3 p-6 sm:grid-cols-3"><div className="rounded-2xl bg-[#f7faff] p-4"><p className="text-[10px] font-bold text-[#8da0b9]">إجمالي أولياء الأمور</p><b className="mt-1 block text-2xl font-black">{items.length}</b></div><div className="rounded-2xl bg-[#eafff5] p-4"><p className="text-[10px] font-bold text-[#16845b]">حسابات نشطة</p><b className="mt-1 block text-2xl font-black">{items.filter(x=>x.account_status==="active").length}</b></div><div className="rounded-2xl bg-[#eef4ff] p-4"><p className="text-[10px] font-bold text-[#3974ff]">نتائج البحث</p><b className="mt-1 block text-2xl font-black">{filtered.length}</b></div></div>
+    <div className="px-6 pb-6">{loading?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center text-sm">جارٍ تحميل أولياء الأمور...</div>:error?<div className="rounded-2xl bg-[#fff0f1] p-5 text-sm text-[#c3344b]">تعذر تحميل البيانات: {error}</div>:filtered.length===0?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center text-sm font-bold text-[#71849b]">لا توجد نتائج مطابقة.</div>:<div className="overflow-x-auto rounded-2xl border border-[#e5ecf4]"><table className="w-full min-w-[600px] text-right text-xs"><thead className="bg-[#f8fbff] text-[#8da0b9]"><tr><th className="px-4 py-3">الاسم</th><th className="px-4 py-3">البريد الإلكتروني</th><th className="px-4 py-3">الهاتف</th><th className="px-4 py-3">المدينة / الدولة</th><th className="px-4 py-3">الحالة</th></tr></thead><tbody>{filtered.map(x=><tr key={x.id} className="border-t border-[#edf1f6]"><td className="px-4 py-4 font-extrabold">{x.full_name||"بدون اسم"}</td><td className="px-4 py-4" dir="ltr">{x.email||"—"}</td><td className="px-4 py-4" dir="ltr">{x.phone||"—"}</td><td className="px-4 py-4">{[x.city,x.country].filter(Boolean).join("، ")||"—"}</td><td className="px-4 py-4">{x.account_status==="active"?"نشط":x.account_status==="suspended"?"موقوف":x.account_status==="deactivated"?"معطّل":x.account_status||"—"}</td></tr>)}</tbody></table></div>}</div>
+  </section>;
+}
+
+function AdminSection({title,location}:{title:string;location:string}){
+  const details:Record<string,{description:string;items:string[];icon:any}>={
+    "/admin/content":{description:"مساحة إدارة المحتوى التعليمي للمنصة. استخدمي الاختصارات للوصول مباشرة إلى الأقسام المرتبطة.",items:["مراجعة طلبات المعلمين","متابعة الطلاب المسجلين","عرض الحجوزات"],icon:BookOpen},
+    "/admin/support":{description:"مركز متابعة دعم المستخدمين. عرض تذاكر الدعم والمحادثات يحتاج ربطه بجدول التذاكر في قاعدة البيانات.",items:["عرض المستخدمين","مراجعة طلبات المعلمين","عرض الحجوزات"],icon:Headphones},
+    "/admin/audit":{description:"سجل متابعة إجراءات الإدارة. عرض الأحداث الفعلية يحتاج ربط سجل التدقيق بمصدر الأحداث في قاعدة البيانات.",items:["إدارة المستخدمين","طلبات المعلمين","الإعدادات"],icon:FileText},
+    "/admin/settings":{description:"إعدادات إدارة المنصة. حفظ الإعدادات التشغيلية يحتاج تحديد القيم وربطها بقاعدة البيانات.",items:["إدارة المستخدمين","المالية والعمولة","سجل التدقيق"],icon:Settings}
+  };
+  const info=details[location]||{description:"تم فتح القسم المطلوب. اختاري أحد الاختصارات للوصول مباشرة إلى بيانات الإدارة المتاحة.",items:["إدارة المستخدمين","إدارة الطلاب","إدارة الحجوزات"],icon:LayoutDashboard};
+  const Icon=info.icon;
+  const links:Record<string,string>={"مراجعة طلبات المعلمين":"/admin/teachers","متابعة الطلاب المسجلين":"/admin/students","عرض الحجوزات":"/admin/bookings","عرض المستخدمين":"/admin/users","إدارة المستخدمين":"/admin/users","طلبات المعلمين":"/admin/teachers","الإعدادات":"/admin/settings","المالية والعمولة":"/admin/finance","سجل التدقيق":"/admin/audit","إدارة الطلاب":"/admin/students","إدارة الحجوزات":"/admin/bookings"};
+  return <section className="rounded-[26px] border border-[#dfe8f2] bg-white p-6 shadow-sm sm:p-8"><div className="flex items-start gap-4 border-b border-[#e5ecf4] pb-6"><span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#eef4ff]"><Icon className="h-6 w-6 text-[#3974ff]"/></span><div><p className="text-[11px] font-extrabold text-[#3974ff]">إدارة المنصة</p><h2 className="mt-1 text-2xl font-black">{title}</h2><p className="mt-3 max-w-3xl text-sm leading-7 text-[#71849b]">{info.description}</p></div></div><h3 className="mt-6 font-black">اختصارات هذا القسم</h3><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{info.items.map(item=><Link key={item} href={links[item]||"/admin"} className="flex items-center gap-3 rounded-2xl border border-[#e5ecf4] bg-[#fbfdff] p-4 text-sm font-bold transition hover:border-[#b9d5ff] hover:bg-[#f4f9ff]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eef4ff]"><ChevronLeft className="h-4 w-4 text-[#3974ff]"/></span>{item}<ChevronLeft className="mr-auto h-4 w-4 text-[#aebdd0]"/></Link>)}</div><Link href="/admin" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#142a57] px-5 py-3 text-sm font-bold text-white">العودة إلى لوحة الإدارة <ChevronLeft className="h-4 w-4"/></Link></section>;
+}
