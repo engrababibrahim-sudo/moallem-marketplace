@@ -276,7 +276,8 @@ function UsersAdmin(){
     const q=search.trim().toLowerCase();
     return items.filter(x=>[x.full_name,x.email,x.role,x.id].some(v=>String(v??"").toLowerCase().includes(q)));
   },[items,search]);
-  const roleLabel=(role:string)=>({student:"طالب",parent:"ولي أمر",teacher:"معلم",admin:"مدير",super_admin:"مدير عام",support:"دعم"})[role]||role;
+  const roleNames:Record<string,string>={student:"طالب",parent:"ولي أمر",teacher:"معلم",admin:"مدير",super_admin:"مدير عام",support:"دعم"};
+  const roleLabel=(role:string)=>roleNames[role]||role;
   const statusLabel=(status:string)=>status==="active"?"نشط":status==="suspended"?"موقوف":status==="deactivated"?"معطّل":status;
   return <section className="rounded-[26px] border border-[#dfe8f2] bg-white shadow-sm">
     <div className="border-b border-[#e5ecf4] p-6">
