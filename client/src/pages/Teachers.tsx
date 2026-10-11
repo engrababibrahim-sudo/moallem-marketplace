@@ -41,10 +41,16 @@ export default function Teachers() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setSubject(params.get("subject") || "");
-    setStage(params.get("grade") || "");
-    const price = params.get("price") || "";
-    setMaxPrice(price);
+    setSubject("");
+    const requestedStage = params.get("grade") || "";
+    setStage(
+      requestedStage.includes("ابتدائي") ? "ابتدائي" :
+      requestedStage.includes("إعدادي") || requestedStage.includes("اعدادي") ? "إعدادي" :
+      requestedStage.includes("ثانوي") ? "ثانوي" :
+      requestedStage.includes("جامعي") ? "جامعي" :
+      stages.includes(requestedStage) ? requestedStage : ""
+    );
+    setMaxPrice("");
     setQuery(params.get("q") || "");
     setCurrency(params.get("currency") || "");
     setCountry(params.get("country") || "");
@@ -70,7 +76,6 @@ export default function Teachers() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const price = maxPrice ? Number(maxPrice) : null;
     return teachers.filter((teacher) => {
       const text = [
         teacher.display_name || "",
@@ -82,18 +87,42 @@ export default function Teachers() {
       ].join(" ").toLowerCase();
 
       const matchesQuery = !q || text.includes(q);
-      const matchesSubject = !subject || teacher.subjects?.includes(subject);
+      const normalizeSubject = (value: string) => {
+        const normalized = value.trim().toLowerCase().replace(/[ـ\s_-]+/g, "");
+        const aliases: Record<string, string> = {
+          english: "لغةإنجليزية",
+          englishlanguage: "لغةإنجليزية",
+          "لغةانجليزية": "لغةإنجليزية",
+          arabic: "لغةعربية",
+          arabiclanguage: "لغةعربية",
+          math: "رياضيات",
+          mathematics: "رياضيات",
+          computer: "حاسبآلي",
+          computer science: "علومالحاسب",
+          quran: "قرآنكريم",
+          tajweed: "تجويد",
+        };
+        return aliases[normalized] || normalized;
+      };
+      const normalizeStage = (value: string) => {
+        const normalized = value.trim().toLowerCase();
+        if (normalized.includes("ابتدائي") || normalized.includes("primary") || normalized.includes("elementary")) return "ابتدائي";
+        if (normalized.includes("إعدادي") || normalized.includes("اعدادي") || normalized.includes("preparatory") || normalized.includes("middle")) return "إعدادي";
+        if (normalized.includes("ثانوي") || normalized.includes("secondary") || normalized.includes("high school")) return "ثانوي";
+        if (normalized.includes("جامعي") || normalized.includes("university") || normalized.includes("college")) return "جامعي";
+        return normalized;
+      };
+      const matchesSubject = !subject || (teacher.subjects || []).some((item) => normalizeSubject(item) === normalizeSubject(subject));
       const matchesStage =
         !stage ||
-        teacher.education_stages?.some((item) => item.includes(stage)) ||
-        teacher.grades?.some((item) => item.includes(stage));
-      const matchesPrice = price === null || teacher.hourly_rate === null || teacher.hourly_rate <= price;
+        (teacher.education_stages || []).some((item) => normalizeStage(item) === normalizeStage(stage)) ||
+        (teacher.grades || []).some((item) => normalizeStage(item) === normalizeStage(stage));
       const matchesCurrency = !currency || teacher.currency === currency;
       const matchesCountry = !country || teacher.country === country;
 
-      return matchesQuery && matchesSubject && matchesStage && matchesPrice && matchesCurrency && matchesCountry;
+      return matchesQuery && matchesSubject && matchesStage && matchesCurrency && matchesCountry;
     });
-  }, [teachers, query, subject, stage, maxPrice, currency, country]);
+  }, [teachers, query, subject, stage, currency, country]);
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#fbf8f4] text-[#182431]">
@@ -132,7 +161,6 @@ export default function Teachers() {
           </label>
           <Select label="المادة" value={subject} onChange={setSubject} options={subjectOptions} placeholder="كل المواد" />
           <Select label="المرحلة" value={stage} onChange={(value) => { setStage(value); setSubject(""); }} options={stages} placeholder="كل المراحل" />
-          <Select label="السعر" value={maxPrice} onChange={setMaxPrice} options={["300", "500", "700"]} labels={["حتى ٣٠٠", "حتى ٥٠٠", "حتى ٧٠٠"]} placeholder="كل الأسعار" />
           <Select label="العملة" value={currency} onChange={setCurrency} options={["EGP","SAR","AED","KWD","QAR","BHD","OMR","USD","EUR","GBP","CAD","AUD","TRY","JOD","MAD","DZD","TND"]} placeholder="كل العملات" />
           <Select label="الدولة" value={country} onChange={setCountry} options={["مصر","السعودية","الإمارات","الكويت","قطر","البحرين","عُمان","الأردن","المغرب","الجزائر","تونس","الولايات المتحدة","المملكة المتحدة","كندا","أستراليا","تركيا"]} placeholder="كل الدول" />
         </div>
