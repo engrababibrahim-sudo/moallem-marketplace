@@ -117,7 +117,11 @@ export default function Home() {
     window.setTimeout(() => setNotice(""), 2800);
   };
   const update = (key: keyof Onboarding, value: string) =>
-    setOnboarding((current) => ({ ...current, [key]: value }));
+    setOnboarding((current) => {
+      if (key === "stage") return { ...current, stage: value, grade: "", subject: "" };
+      if (key === "grade") return { ...current, grade: value, subject: "" };
+      return { ...current, [key]: value };
+    });
   const openOnboarding = () => {
     setStep(0);
     setOnboardingOpen(true);
@@ -130,8 +134,8 @@ export default function Home() {
   const questions = [
     ["لمن نبحث عن معلم؟", "role", ["طالب", "ولي أمر"]],
     ["ما المرحلة الدراسية؟", "stage", ["ابتدائي", "إعدادي", "ثانوي", "جامعي"]],
-    ["ما الصف؟", "grade", ["الصف السادس", "الأول الإعدادي", "الأول الثانوي", "الثالث الثانوي"]],
-    ["ما المادة؟", "subject", ["رياضيات", "لغة عربية", "لغة إنجليزية", "فيزياء", "كيمياء"]],
+    ["ما الصف؟", "grade", []],
+    ["ما المادة؟", "subject", []],
     ["ما هدفك من التعلم؟", "goal", ["رفع الدرجة", "الاستعداد للاختبار", "فهم الأساسيات", "تنظيم المذاكرة"]],
     ["كيف تصف مستواك؟", "level", ["أحتاج تأسيسًا", "متوسط", "متقدم"]],
     ["ما أكثر ما تحتاجه؟", "needs", ["حل المسائل", "شرح المفاهيم", "خطة مذاكرة", "ثقة قبل الامتحان"]],
@@ -144,8 +148,17 @@ export default function Home() {
     "ثانوي": ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"],
     "جامعي": ["السنة الجامعية الأولى", "السنة الجامعية الثانية", "السنة الجامعية الثالثة", "السنة الجامعية الرابعة", "دراسات عليا"],
   };
+  const subjectsByStage: Record<string, string[]> = {
+    "ابتدائي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية"],
+    "إعدادي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي"],
+    "ثانوي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "فيزياء", "كيمياء", "أحياء", "جيولوجيا", "تاريخ", "جغرافيا", "فلسفة ومنطق", "علم نفس واجتماع"],
+    "جامعي": ["رياضيات", "فيزياء", "كيمياء", "أحياء", "برمجة", "تكنولوجيا المعلومات", "علوم الحاسب", "لغة إنجليزية", "لغة عربية"],
+  };
   const current = questions[step];
-  const currentOptions = step === 2 ? (gradeOptionsByStage[onboarding.stage] ?? []) : current?.[2] ?? [];
+  const currentOptions =
+    step === 2 ? (gradeOptionsByStage[onboarding.stage] ?? []) :
+    step === 3 ? (subjectsByStage[onboarding.stage] ?? []) :
+    current?.[2] ?? [];
   const completed = Math.round((getOnboardingProgress(onboarding, 9) / 100) * 9);
 
   const findTeachers = () => {
