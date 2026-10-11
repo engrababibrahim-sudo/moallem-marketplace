@@ -123,7 +123,19 @@ export default function Teachers() {
         if (normalized.includes("جامعي") || normalized.includes("university") || normalized.includes("college")) return "جامعي";
         return normalized;
       };
-      const matchesSubject = !subject || (teacher.subjects || []).some((item) => normalizeSubject(item) === normalizeSubject(subject));
+      const normalizedSelectedSubject = normalizeSubject(subject);
+      const subjectCandidates = [
+        ...(teacher.subjects || []),
+        teacher.specialization || "",
+      ].filter(Boolean);
+      const matchesSubject =
+        !subject ||
+        subjectCandidates.some((item) => {
+          const normalizedItem = normalizeSubject(item);
+          return normalizedItem === normalizedSelectedSubject ||
+            normalizedItem.includes(normalizedSelectedSubject) ||
+            normalizedSelectedSubject.includes(normalizedItem);
+        });
       const teacherStages = teacher.education_stages || [];
       const teacherGrades = teacher.grades || [];
       const hasStageInformation = teacherStages.length > 0 || teacherGrades.length > 0;
