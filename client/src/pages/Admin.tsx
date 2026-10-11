@@ -93,7 +93,7 @@ export default function Admin(){
       </header>
 
       <main className="mx-auto max-w-[1540px] p-5 lg:p-8">
-        {location==="/admin"?<Dashboard/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:<Inactive title={title}/>}
+        {location==="/admin"?<Dashboard/>:location==="/admin/users"?<UsersAdmin/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:<Inactive title={title}/>}
       </main>
     </div>
   </div>;
@@ -254,6 +254,50 @@ function TeacherRequests(){
  </section>;
 }
 
+
+function UsersAdmin(){
+  type UserRow={id:string;full_name:string|null;email:string|null;role:string;account_status:string;created_at:string};
+  const [items,setItems]=useState<UserRow[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [search,setSearch]=useState("");
+  const [error,setError]=useState("");
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      const {data,error}=await supabase.from("profiles").select("id,full_name,email,role,account_status,created_at").order("created_at",{ascending:false});
+      if(!alive)return;
+      if(error)setError(error.message);
+      setItems((data??[]) as UserRow[]);
+      setLoading(false);
+    })();
+    return ()=>{alive=false};
+  },[]);
+  const filtered=useMemo(()=>{
+    const q=search.trim().toLowerCase();
+    return items.filter(x=>[x.full_name,x.email,x.role,x.id].some(v=>String(v??"").toLowerCase().includes(q)));
+  },[items,search]);
+  const roleLabel=(role:string)=>({student:"طالب",parent:"ولي أمر",teacher:"معلم",admin:"مدير",super_admin:"مدير عام",support:"دعم"})[role]||role;
+  const statusLabel=(status:string)=>status==="active"?"نشط":status==="suspended"?"موقوف":status==="deactivated"?"معطّل":status;
+  return <section className="rounded-[26px] border border-[#dfe8f2] bg-white shadow-sm">
+    <div className="border-b border-[#e5ecf4] p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 className="text-xl font-black">إدارة المستخدمين</h2><p className="mt-2 text-xs text-[#8da0b9]">عرض حسابات المنصة وبريد الدخول والدور المرتبط بكل حساب. هذه الصفحة للعرض فقط ولا تغيّر الصلاحيات.</p></div>
+        <div className="flex items-center gap-2 rounded-xl bg-[#f7faff] px-3 py-2.5 sm:w-80"><Search className="h-4 w-4 text-[#8da0b9]"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث بالاسم أو البريد أو الدور..." className="w-full bg-transparent text-xs outline-none"/></div>
+      </div>
+    </div>
+    <div className="grid gap-3 p-6 sm:grid-cols-3">
+      <div className="rounded-2xl bg-[#f7faff] p-4"><p className="text-[10px] font-bold text-[#8da0b9]">إجمالي الحسابات</p><b className="mt-1 block text-2xl font-black">{items.length}</b></div>
+      <div className="rounded-2xl bg-[#eafff5] p-4"><p className="text-[10px] font-bold text-[#16845b]">حسابات المعلمين</p><b className="mt-1 block text-2xl font-black">{items.filter(x=>x.role==="teacher").length}</b></div>
+      <div className="rounded-2xl bg-[#fff6e8] p-4"><p className="text-[10px] font-bold text-[#b96a00]">نتائج البحث</p><b className="mt-1 block text-2xl font-black">{filtered.length}</b></div>
+    </div>
+    <div className="px-6 pb-6">
+      {loading?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center text-sm font-bold text-[#71849b]">جارٍ تحميل الحسابات...</div>
+      :error?<div className="rounded-2xl bg-[#fff0f1] p-5 text-sm font-bold text-[#c3344b]">تعذر تحميل الحسابات: {error}</div>
+      :filtered.length===0?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center text-sm font-bold text-[#71849b]">لا توجد حسابات مطابقة للبحث.</div>
+      :<div className="overflow-x-auto rounded-2xl border border-[#e5ecf4]"><table className="w-full min-w-[650px] text-right text-xs"><thead className="bg-[#f8fbff] text-[#8da0b9]"><tr><th className="px-4 py-3">الاسم</th><th className="px-4 py-3">البريد الإلكتروني</th><th className="px-4 py-3">الدور</th><th className="px-4 py-3">الحالة</th><th className="px-4 py-3">معرّف الحساب</th></tr></thead><tbody>{filtered.map(x=><tr key={x.id} className="border-t border-[#edf1f6]"><td className="px-4 py-4 font-extrabold">{x.full_name||"بدون اسم"}</td><td className="px-4 py-4" dir="ltr">{x.email||"بدون بريد"}</td><td className="px-4 py-4">{roleLabel(x.role)}</td><td className="px-4 py-4">{statusLabel(x.account_status)}</td><td className="px-4 py-4 font-mono text-[10px]" dir="ltr">{x.id}</td></tr>)}</tbody></table></div>}
+    </div>
+  </section>;
+}
 
 function Students(){
   type Student={id:string;full_name:string|null;email:string|null;phone:string|null;city:string|null;country:string|null;account_status:string;created_at:string;education_stage:string|null;grade:string|null;learning_level:string|null;preferred_subjects:string[]|null;preferred_format:string|null};
