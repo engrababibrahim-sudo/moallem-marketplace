@@ -96,7 +96,7 @@ export default function Teachers() {
           math: "رياضيات",
           mathematics: "رياضيات",
           computer: "حاسبآلي",
-          computer science: "علومالحاسب",
+          computerscience: "علومالحاسب",
           quran: "قرآنكريم",
           tajweed: "تجويد",
         };
@@ -173,7 +173,7 @@ export default function Teachers() {
           <div className="mt-8 rounded-3xl bg-white p-12 text-center shadow-sm">
             <ShieldCheck className="mx-auto h-10 w-10 text-black/15" />
             <h2 className="mt-4 text-xl font-extrabold">{subject ? `لا يوجد معلم متاح لمادة ${subject}${stage ? ` في مرحلة ${stage}` : ""} حاليًا` : "لا توجد نتائج مطابقة"}</h2>
-            <p className="mt-2 text-sm text-black/45">{subject ? "لن نعرض معلمين لمواد أخرى بدلًا من المادة التي اخترتها. يمكنك إزالة الفلاتر أو تجربة مرحلة أخرى." : "جرّبي تغيير المادة أو المرحلة أو السعر."}</p>
+            <p className="mt-2 text-sm text-black/45">{subject ? "لن نعرض معلمين لمواد أخرى بدلًا من المادة التي اخترتها. يمكنك إزالة الفلاتر أو تجربة مرحلة أخرى." : "جرّبي تغيير المادة أو المرحلة أو الدولة."}</p>
           </div>
         ) : (
           <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
