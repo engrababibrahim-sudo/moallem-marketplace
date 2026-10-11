@@ -40,7 +40,7 @@ export default async function handler(req: any, res: any) {
       admin.from("live_session_segments").select("booking_id,join_url,host_url,scheduled_start_at,scheduled_end_at,status").in("booking_id", ids).eq("segment_number", 2),
     ]);
     if (sessionsError) throw sessionsError;
-    if (segmentsError) throw segmentsError;
+    if (segmentsError) console.warn("Teacher continuation links unavailable; migration may be pending", segmentsError.message);
     const continuationByBooking = Object.fromEntries((segments ?? []).map((s: any) => [s.booking_id, s]));
     return json(res, 200, { sessions: (sessions ?? []).map((s: any) => {
       const continuation = continuationByBooking[s.booking_id];
