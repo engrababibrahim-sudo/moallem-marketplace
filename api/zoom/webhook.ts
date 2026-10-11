@@ -77,12 +77,19 @@ export default async function handler(req: any, res: any) {
     const { data: session, error } = await admin.from("live_sessions")
       .select("booking_id,provider_meeting_id").eq("provider_meeting_id", meetingId).maybeSingle();
     if (error) throw error;
-    if (!session) {
-      console.warn("Zoom attendance event did not match a live session", { event, meetingId });
+    let bookingId = session?.booking_id as string | undefined;
+    if (!bookingId) {
+      const { data: segment, error: segmentError } = await admin.from("live_session_segments")
+        .select("booking_id,provider_meeting_id").eq("provider_meeting_id", meetingId).maybeSingle();
+      if (segmentError) throw segmentError;
+      bookingId = segment?.booking_id as string | undefined;
+    }
+    if (!bookingId) {
+      console.warn("Zoom attendance event did not match a live session or continuation", { event, meetingId });
       return send(res, 200, { received: true, unmatched: true });
     }
     const { error: insertError } = await admin.from("zoom_attendance_events").insert({
-      booking_id: session.booking_id,
+      booking_id: bookingId,
       provider_meeting_id: meetingId,
       event_type: event,
       participant_name: participant.user_name || participant.name || null,
@@ -92,7 +99,7 @@ export default async function handler(req: any, res: any) {
       raw_event: body
     });
     if (insertError) throw insertError;
-    console.info("Zoom attendance event saved", { event, bookingId: session.booking_id, meetingId });
+    console.info("Zoom attendance event saved", { event, bookingId, meetingId });
     return send(res, 200, { received: true });
   } catch (error) {
     console.error("Zoom attendance webhook failed", error);
