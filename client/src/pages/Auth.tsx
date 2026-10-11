@@ -78,7 +78,7 @@ export default function Auth() {
       <section className="rounded-[2rem] bg-[#182431] p-8 text-white lg:p-10">
         <ShieldCheck className="text-[#ffb36e]" /><h1 className="mt-10 text-4xl font-extrabold leading-tight">تعلم بثقة.<br /><span className="text-[#ffb36e]">واختر معلمك بوضوح.</span></h1>
         <p className="mt-6 leading-8 text-white/65">حساب واحد للوصول إلى المعلمين والحجوزات ومتابعة رحلة التعلم.</p>
-        <div className="mt-10 space-y-4 text-sm text-white/75"><p>✓ مصادقة مستقلة عن Manus</p><p>✓ صلاحيات محمية داخل PostgreSQL</p><p>✓ المعلمون يمرون بالمراجعة قبل الظهور</p></div>
+        <div className="mt-10 space-y-4 text-sm text-white/75"><p>✓ تسجيل دخول آمن وإدارة للحساب</p><p>✓ صلاحيات محمية داخل PostgreSQL</p><p>✓ المعلمون يمرون بالمراجعة قبل الظهور</p></div>
       </section>
       <section className="rounded-[2rem] bg-white p-7 shadow-sm lg:p-10">
         <div className="flex gap-6 border-b border-black/10"><button onClick={() => {setMode("login");setError("");}} className={"pb-4 text-sm font-bold " + (mode === "login" ? "border-b-2 border-[#ff7a00] text-[#e76f00]" : "text-black/35")}>تسجيل الدخول</button><button onClick={() => {setMode("signup");setError("");}} className={"pb-4 text-sm font-bold " + (mode === "signup" ? "border-b-2 border-[#ff7a00] text-[#e76f00]" : "text-black/35")}>إنشاء حساب</button></div>
