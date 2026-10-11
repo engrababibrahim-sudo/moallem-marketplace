@@ -65,8 +65,8 @@ export default async function handler(req: any, res: any) {
       .select("booking_id,join_url,scheduled_start_at,scheduled_end_at,status")
       .in("booking_id", ids).eq("segment_number", 2);
     if (segmentError) {
-      console.error("Student continuation lookup error", segmentError);
-      return json(res, 500, { error: "تعذر تحميل رابط استكمال الحصة." });
+      // Keep the original meeting link usable if the continuation migration has not been applied yet.
+      console.warn("Student continuation links unavailable; migration may be pending", segmentError.message);
     }
     const continuationByBooking = Object.fromEntries((segments ?? []).map((segment: any) => [segment.booking_id, segment]));
     return json(res, 200, {
