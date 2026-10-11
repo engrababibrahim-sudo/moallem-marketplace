@@ -23,17 +23,15 @@ export default function TeacherBookings(){
   const map=new Map(ps.map(x=>[x.id,x])); setBookings(rows.map(x=>({...x,student:map.get(x.student_id)})));
   const bookingIds=rows.map(x=>x.id);
   if(bookingIds.length){
-   const [baseResult,continuationResult]=await Promise.all([
-    supabase.from("live_sessions").select("id,booking_id,provider,join_url,host_url,status,scheduled_start_at,scheduled_end_at").in("booking_id",bookingIds),
-    supabase.from("live_session_segments").select("booking_id,join_url,host_url,scheduled_start_at,scheduled_end_at").in("booking_id",bookingIds).eq("segment_number",2)
-   ]);
-   if(!baseResult.error){
-    const continuationByBooking=Object.fromEntries(((continuationResult.data??[]) as {booking_id:string;join_url:string|null;host_url:string|null;scheduled_start_at:string;scheduled_end_at:string}[]).map(x=>[x.booking_id,x]));
-    setSessions(Object.fromEntries(((baseResult.data??[]) as LiveSession[]).map(session=>{
-     const continuation=continuationByBooking[session.booking_id];
-     return [session.booking_id,{...session,continuation_join_url:continuation?.join_url??null,continuation_host_url:continuation?.host_url??null,continuation_scheduled_start_at:continuation?.scheduled_start_at??null,continuation_scheduled_end_at:continuation?.scheduled_end_at??null}];
-    })));
-   }
+   try{
+    const {data:{session:authSession}}=await supabase.auth.getSession();
+    if(authSession?.access_token){
+     const response=await fetch("/api/live-sessions/teacher",{headers:{Authorization:"Bearer "+authSession.access_token}});
+     const result=await response.json().catch(()=>null);
+     if(response.ok&&Array.isArray(result?.sessions))setSessions(Object.fromEntries((result.sessions as LiveSession[]).map(session=>[session.booking_id,session])));
+     else setMessage(result?.error||"تعذر تحميل روابط الحصص.");
+    }
+   }catch(error){console.error(error);setMessage("تعذر تحميل روابط الحصص.");}
   }
   setLoading(false);
  }
