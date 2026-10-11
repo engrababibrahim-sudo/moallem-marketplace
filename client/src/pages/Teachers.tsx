@@ -19,7 +19,13 @@ type Teacher = {
 };
 
 const stages = ["ابتدائي", "إعدادي", "ثانوي", "جامعي"];
-const subjects = ["رياضيات", "لغة عربية", "لغة إنجليزية", "فيزياء", "كيمياء", "علوم", "برمجة", "تكنولوجيا المعلومات", "علوم الحاسب"];
+const subjectsByStage: Record<string, string[]> = {
+  "ابتدائي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي", "قرآن كريم", "تجويد"],
+  "إعدادي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي", "برمجة", "فقه", "أصول الدين", "قرآن كريم", "تجويد"],
+  "ثانوي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "فيزياء", "كيمياء", "أحياء", "جيولوجيا", "تاريخ", "جغرافيا", "فلسفة ومنطق", "علم نفس واجتماع", "فقه", "أصول الدين", "قرآن كريم", "تجويد"],
+  "جامعي": ["رياضيات", "فيزياء", "كيمياء", "أحياء", "برمجة", "تكنولوجيا المعلومات", "علوم الحاسب", "لغة إنجليزية", "لغة عربية"],
+};
+const allSubjects = [...new Set(Object.values(subjectsByStage).flat())];
 
 export default function Teachers() {
   const [location] = useLocation();
@@ -31,6 +37,7 @@ export default function Teachers() {
   const [maxPrice, setMaxPrice] = useState("");
   const [currency, setCurrency] = useState("");
   const [country, setCountry] = useState("");
+  const subjectOptions = stage ? (subjectsByStage[stage] ?? allSubjects) : allSubjects;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -123,8 +130,8 @@ export default function Teachers() {
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="اسم أو مادة أو تخصص" className="w-full bg-transparent text-sm outline-none" />
             </div>
           </label>
-          <Select label="المادة" value={subject} onChange={setSubject} options={subjects} placeholder="كل المواد" />
-          <Select label="المرحلة" value={stage} onChange={setStage} options={stages} placeholder="كل المراحل" />
+          <Select label="المادة" value={subject} onChange={setSubject} options={subjectOptions} placeholder="كل المواد" />
+          <Select label="المرحلة" value={stage} onChange={(value) => { setStage(value); setSubject(""); }} options={stages} placeholder="كل المراحل" />
           <Select label="السعر" value={maxPrice} onChange={setMaxPrice} options={["300", "500", "700"]} labels={["حتى ٣٠٠", "حتى ٥٠٠", "حتى ٧٠٠"]} placeholder="كل الأسعار" />
           <Select label="العملة" value={currency} onChange={setCurrency} options={["EGP","SAR","AED","KWD","QAR","BHD","OMR","USD","EUR","GBP","CAD","AUD","TRY","JOD","MAD","DZD","TND"]} placeholder="كل العملات" />
           <Select label="الدولة" value={country} onChange={setCountry} options={["مصر","السعودية","الإمارات","الكويت","قطر","البحرين","عُمان","الأردن","المغرب","الجزائر","تونس","الولايات المتحدة","المملكة المتحدة","كندا","أستراليا","تركيا"]} placeholder="كل الدول" />
