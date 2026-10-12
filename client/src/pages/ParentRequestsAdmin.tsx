@@ -27,11 +27,11 @@ export default function ParentRequestsAdmin() {
   useEffect(() => { if (profile && ["admin", "super_admin", "support"].includes(profile.role)) void load(); }, [profile]);
 
   function whatsappUrl(row: ParentRequestRow) {
-    const dial = (row.dial_code || "").replace(/\\D/g, "");
-    let localPhone = (row.phone || "").replace(/\\D/g, "");
+    const dial = (row.dial_code || "").replace(/\D/g, "");
+    let localPhone = (row.phone || "").replace(/\D/g, "");
     if (dial && localPhone.startsWith("0")) localPhone = localPhone.slice(1);
     const fullPhone = `${dial}${localPhone}`;
-    const message = `مرحبًا أ/ ${row.parent_name}، معك فريق منصة مُعلّم التعليمية. وصلنا طلبك بخصوص المرحلة: ${row.stages.join("، ")}، والمادة: ${row.subjects.join("، ")}. يسعدنا مساعدتك في اختيار المعلم المناسب.\\n\\nهل يمكننا معرفة الصف الدراسي والأوقات المناسبة لك؟`;
+    const message = `مرحبًا أ/ ${row.parent_name}، معك فريق منصة مُعلّم التعليمية. وصلنا طلبك بخصوص المرحلة: ${row.stages.join("، ")}، والمادة: ${row.subjects.join("، ")}. يسعدنا مساعدتك في اختيار المعلم المناسب.\n\nهل يمكننا معرفة الصف الدراسي والأوقات المناسبة لك؟`;
     return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
   }
 
