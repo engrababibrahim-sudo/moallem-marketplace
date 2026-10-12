@@ -137,7 +137,7 @@ export default function Home() {
 
   const questions = [
     ["لمن نبحث عن معلم؟", "role", ["طالب", "ولي أمر"]],
-    ["ما المرحلة الدراسية؟", "stage", ["ابتدائي", "إعدادي", "ثانوي", "جامعي"]],
+    ["ما المرحلة الدراسية؟", "stage", ["روضة", "ابتدائي", "إعدادي", "ثانوي", "جامعي"]],
     ["ما الصف؟", "grade", []],
     ["ما المادة؟", "subject", []],
     ["ما هدفك من التعلم؟", "goal", ["رفع الدرجة", "الاستعداد للاختبار", "فهم الأساسيات", "تنظيم المذاكرة"]],
@@ -146,13 +146,13 @@ export default function Home() {
     ["ما نوع الدروس المفضل؟", "format", ["فردية مباشرة", "مرنة حسب الجدول", "مزيج من الاثنين"]],
     ["متى يناسبك التعلم؟", "time", ["بعد الظهر", "المساء", "نهاية الأسبوع"]],
   ] as const;
-  const gradeOptionsByStage: Record<string, string[]> = {
+  const gradeOptionsByStage: Record<string, string[]> = {\n    "روضة": ["المستوى الأول روضة", "المستوى الثاني روضة", "المستوى الثالث روضة"],
     "ابتدائي": ["الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي", "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"],
     "إعدادي": ["الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"],
     "ثانوي": ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"],
     "جامعي": ["السنة الجامعية الأولى", "السنة الجامعية الثانية", "السنة الجامعية الثالثة", "السنة الجامعية الرابعة", "دراسات عليا"],
   };
-  const subjectsByStage: Record<string, string[]> = {
+  const subjectsByStage: Record<string, string[]> = {\n    "روضة": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "حاسب آلي"],
     "ابتدائي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي", "قرآن كريم", "تجويد"],
     "إعدادي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي", "برمجة", "فقه", "أصول الدين", "قرآن كريم", "تجويد"],
     "ثانوي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "فيزياء", "كيمياء", "أحياء", "جيولوجيا", "تاريخ", "جغرافيا", "فلسفة ومنطق", "علم نفس واجتماع"],
@@ -284,9 +284,9 @@ export default function Home() {
           <div id="teacher-search" className="relative z-20 mt-14 rounded-[1.75rem] border border-white bg-white p-4 shadow-[0_20px_55px_-35px_rgba(24,36,49,.38)] sm:p-5 lg:mt-20">
             <div className="mb-4 flex items-center gap-2 px-1"><span className="grid h-8 w-8 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Search className="h-4 w-4" /></span><div><b className="block text-sm">ابدأ البحث عن معلم</b><span className="text-[11px] text-[#182431]/50">اختر ما يناسبك — ويمكنك تعديل التصفية لاحقًا</span></div></div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              <SearchSelect label="المرحلة" value={search.grade} onChange={(grade) => setSearch((s) => ({ ...s, grade, subject: "" }))} options={["ابتدائي", "إعدادي", "ثانوي", "جامعي"]} placeholder="كل المراحل" />
+              <SearchSelect label="المرحلة" value={search.grade} onChange={(grade) => setSearch((s) => ({ ...s, grade, subject: "" }))} options={["روضة", "ابتدائي", "إعدادي", "ثانوي", "جامعي"]} placeholder="كل المراحل" />
               <SearchSelect label="المادة" value={search.subject} onChange={(subject) => setSearch((s) => ({ ...s, subject }))} options={searchSubjectOptions} placeholder="اختر المادة" />
-              <SearchSelect label="الدولة" value={search.country} onChange={(country) => setSearch((s) => ({ ...s, country }))} options={["مصر", "السعودية", "الإمارات", "الكويت", "الأردن"]} placeholder="اختر الدولة" />
+              <SearchSelect label="الدولة" value={search.country} onChange={(country) => setSearch((s) => ({ ...s, country }))} options={["مصر", "السعودية", "الإمارات", "الكويت", "الأردن", "قطر", "البحرين", "عُمان", "العراق", "فلسطين", "لبنان", "سوريا", "اليمن", "ليبيا", "السودان", "المغرب", "الجزائر", "تونس", "تركيا", "الولايات المتحدة", "المملكة المتحدة", "كندا", "أستراليا", "ألمانيا", "فرنسا", "دولة أخرى"]} placeholder="اختر الدولة" />
               <SearchSelect label="نوع الدرس" value={search.format} onChange={(format) => setSearch((s) => ({ ...s, format }))} options={["فردي مباشر", "تجربة تعريفية", "مراجعة اختبار"]} placeholder="كل الأنواع" />
               <SearchSelect label="السعر" value={search.price} onChange={(price) => setSearch((s) => ({ ...s, price }))} options={["حتى ٣٠٠ ج.م", "حتى ٥٠٠ ج.م", "حتى ٧٠٠ ج.م"]} placeholder="كل الأسعار" />
               <SearchSelect label="التوفر" value={search.availability} onChange={(availability) => setSearch((s) => ({ ...s, availability }))} options={["اليوم", "المساء", "نهاية الأسبوع"]} placeholder="أي وقت" />
