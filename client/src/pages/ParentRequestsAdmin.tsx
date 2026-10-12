@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { RefreshCw, ShieldAlert } from "lucide-react";
+import { MessageCircle, RefreshCw, ShieldAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
@@ -24,6 +24,15 @@ export default function ParentRequestsAdmin() {
   }
   useEffect(() => { if (profile && ["admin", "super_admin", "support"].includes(profile.role)) void load(); }, [profile]);
 
+  function whatsappUrl(row: ParentRequestRow) {
+    const dial = (row.dial_code || "").replace(/\\D/g, "");
+    let localPhone = (row.phone || "").replace(/\\D/g, "");
+    if (dial && localPhone.startsWith("0")) localPhone = localPhone.slice(1);
+    const fullPhone = `${dial}${localPhone}`;
+    const message = `مرحبًا أ/ ${row.parent_name}، معك فريق منصة مُعلّم التعليمية. وصلنا طلبك بخصوص المرحلة: ${row.stages.join("، ")}، والمادة: ${row.subjects.join("، ")}. يسعدنا مساعدتك في اختيار المعلم المناسب.\\n\\nهل يمكننا معرفة الصف الدراسي والأوقات المناسبة لك؟`;
+    return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+  }
+
   async function changeStatus(id: string, status: ParentRequestRow["status"]) {
     const { error } = await supabase.from("parent_requests").update({ status }).eq("id", id);
     if (error) setError("تعذر تحديث حالة الطلب. راجعي سياسات الصلاحيات في Supabase.");
@@ -39,7 +48,10 @@ export default function ParentRequestsAdmin() {
     {busy && <p className="py-8 text-center">جارٍ تحميل الطلبات...</p>}
     {!busy && rows.length === 0 && !error && <p className="mt-6 rounded-xl border p-8 text-center text-muted-foreground">لا توجد طلبات حتى الآن.</p>}
     <div className="mt-6 space-y-4">{rows.map(row => <article key={row.id} className="rounded-2xl border bg-card p-5 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{row.parent_name}</h2><p className="mt-1 text-sm text-muted-foreground">{row.country} · {row.dial_code} {row.phone}</p><p className="mt-1 text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString("ar-EG")}</p></div>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{row.parent_name}</h2><p className="mt-1 text-sm text-muted-foreground">{row.country} · {row.dial_code} {row.phone}</p>
+        <a href={whatsappUrl(row)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-sm font-bold text-white hover:bg-[#1fb85a]">
+          <MessageCircle className="h-4 w-4" /> التواصل عبر واتساب
+        </a><p className="mt-1 text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString("ar-EG")}</p></div>
       <select aria-label="حالة الطلب" value={row.status} onChange={e => void changeStatus(row.id, e.target.value as ParentRequestRow["status"])} className="rounded-lg border bg-background px-3 py-2"><option value="new">جديد</option><option value="contacted">تم التواصل</option><option value="closed">مغلق</option></select></div>
       <div className="mt-4 grid gap-4 sm:grid-cols-2"><div><b className="text-sm">المراحل</b><p className="mt-1 text-sm">{row.stages.join("، ")}</p></div><div><b className="text-sm">المواد</b><p className="mt-1 text-sm">{row.subjects.join("، ")}</p></div></div>
       {row.notes && <p className="mt-4 rounded-xl bg-muted p-3 text-sm leading-6">{row.notes}</p>}
