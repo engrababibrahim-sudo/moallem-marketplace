@@ -399,29 +399,51 @@ function AdminBookings(){
 
 
 function ParentsAdmin(){
-  const [items,setItems]=useState<any[]>([]);
+  type ParentRow={id:string;full_name:string|null;email:string|null;phone:string|null;country:string|null;city:string|null;account_status:string|null;created_at:string};
+  const [items,setItems]=useState<ParentRow[]>([]);
   const [loading,setLoading]=useState(true);
   const [search,setSearch]=useState("");
   const [error,setError]=useState("");
+  const [refresh,setRefresh]=useState(0);
   useEffect(()=>{
     let alive=true;
     (async()=>{
+      setLoading(true);
+      setError("");
       const {data,error}=await supabase.from("profiles").select("id,full_name,email,phone,country,city,account_status,created_at").eq("role","parent").order("created_at",{ascending:false});
       if(!alive)return;
-      if(error)setError(error.message);
-      setItems(data??[]);
+      if(error){
+        console.error("Failed to load parent accounts",error);
+        setError(error.message);
+        setItems([]);
+      }else{
+        setItems((data??[]) as ParentRow[]);
+      }
       setLoading(false);
     })();
     return ()=>{alive=false;};
-  },[]);
+  },[refresh]);
   const filtered=useMemo(()=>{
     const q=search.trim().toLowerCase();
     return items.filter(x=>[x.full_name,x.email,x.phone,x.country,x.city].some(v=>String(v??"").toLowerCase().includes(q)));
   },[items,search]);
+  const activeCount=items.filter(x=>x.account_status==="active").length;
   return <section className="rounded-[26px] border border-[#dfe8f2] bg-white shadow-sm">
-    <div className="border-b border-[#e5ecf4] p-6"><h2 className="text-xl font-black">إدارة أولياء الأمور</h2><p className="mt-2 text-xs text-[#8da0b9]">قائمة أولياء الأمور المسجلين وبيانات التواصل وحالة الحساب.</p><div className="mt-4 flex items-center gap-2 rounded-xl bg-[#f7faff] px-3 py-3 sm:max-w-md"><Search className="h-4 w-4 text-[#8da0b9]"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث بالاسم أو البريد أو الهاتف..." className="w-full bg-transparent text-xs outline-none"/></div></div>
-    <div className="grid gap-3 p-6 sm:grid-cols-3"><div className="rounded-2xl bg-[#f7faff] p-4"><p className="text-[10px] font-bold text-[#8da0b9]">إجمالي أولياء الأمور</p><b className="mt-1 block text-2xl font-black">{items.length}</b></div><div className="rounded-2xl bg-[#eafff5] p-4"><p className="text-[10px] font-bold text-[#16845b]">حسابات نشطة</p><b className="mt-1 block text-2xl font-black">{items.filter(x=>x.account_status==="active").length}</b></div><div className="rounded-2xl bg-[#eef4ff] p-4"><p className="text-[10px] font-bold text-[#3974ff]">نتائج البحث</p><b className="mt-1 block text-2xl font-black">{filtered.length}</b></div></div>
-    <div className="px-6 pb-6">{loading?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center text-sm">جارٍ تحميل أولياء الأمور...</div>:error?<div className="rounded-2xl bg-[#fff0f1] p-5 text-sm text-[#c3344b]">تعذر تحميل البيانات: {error}</div>:filtered.length===0?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center text-sm font-bold text-[#71849b]">لا توجد نتائج مطابقة.</div>:<div className="overflow-x-auto rounded-2xl border border-[#e5ecf4]"><table className="w-full min-w-[600px] text-right text-xs"><thead className="bg-[#f8fbff] text-[#8da0b9]"><tr><th className="px-4 py-3">الاسم</th><th className="px-4 py-3">البريد الإلكتروني</th><th className="px-4 py-3">الهاتف</th><th className="px-4 py-3">المدينة / الدولة</th><th className="px-4 py-3">الحالة</th></tr></thead><tbody>{filtered.map(x=><tr key={x.id} className="border-t border-[#edf1f6]"><td className="px-4 py-4 font-extrabold">{x.full_name||"بدون اسم"}</td><td className="px-4 py-4" dir="ltr">{x.email||"—"}</td><td className="px-4 py-4" dir="ltr">{x.phone||"—"}</td><td className="px-4 py-4">{[x.city,x.country].filter(Boolean).join("، ")||"—"}</td><td className="px-4 py-4">{x.account_status==="active"?"نشط":x.account_status==="suspended"?"موقوف":x.account_status==="deactivated"?"معطّل":x.account_status||"—"}</td></tr>)}</tbody></table></div>}</div>
+    <div className="border-b border-[#e5ecf4] p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div><h2 className="text-xl font-black">إدارة أولياء الأمور</h2><p className="mt-2 text-xs leading-6 text-[#8da0b9]">قائمة حسابات أولياء الأمور المسجلين على المنصة. الطلبات المرسلة من نموذج المساعدة تظهر بشكل منفصل في «طلبات أولياء الأمور» ولا تُعدّ حسابات دخول تلقائيًا.</p></div>
+        <button type="button" onClick={()=>setRefresh(v=>v+1)} disabled={loading} className="shrink-0 rounded-xl bg-[#142a57] px-4 py-3 text-xs font-extrabold text-white disabled:opacity-50">{loading?"جارٍ التحديث...":"تحديث البيانات"}</button>
+      </div>
+      <div className="mt-4 flex items-center gap-2 rounded-xl bg-[#f7faff] px-3 py-3 sm:max-w-md"><Search className="h-4 w-4 text-[#8da0b9]"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث بالاسم أو البريد أو الهاتف..." className="w-full bg-transparent text-xs outline-none"/></div>
+    </div>
+    <div className="grid gap-3 p-6 sm:grid-cols-3"><div className="rounded-2xl bg-[#f7faff] p-4"><p className="text-[10px] font-bold text-[#8da0b9]">إجمالي أولياء الأمور المسجلين</p><b className="mt-1 block text-2xl font-black">{loading?"—":items.length}</b></div><div className="rounded-2xl bg-[#eafff5] p-4"><p className="text-[10px] font-bold text-[#16845b]">حسابات نشطة</p><b className="mt-1 block text-2xl font-black">{loading?"—":activeCount}</b></div><div className="rounded-2xl bg-[#eef4ff] p-4"><p className="text-[10px] font-bold text-[#3974ff]">نتائج البحث</p><b className="mt-1 block text-2xl font-black">{loading?"—":filtered.length}</b></div></div>
+    <div className="px-6 pb-6">
+      {loading?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center text-sm">جارٍ تحميل حسابات أولياء الأمور...</div>
+      :error?<div className="rounded-2xl bg-[#fff0f1] p-5 text-sm text-[#c3344b]"><p className="font-extrabold">تعذر تحميل حسابات أولياء الأمور من قاعدة البيانات.</p><p className="mt-2 break-words font-mono text-xs" dir="ltr">{error}</p><p className="mt-2 text-xs leading-6">تحققي من صلاحيات القراءة وسياسات RLS في Supabase؛ لا تعني هذه الرسالة أن عدد الحسابات صفر.</p></div>
+      :items.length===0?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center"><p className="font-extrabold text-[#263b5b]">لا توجد حسابات لأولياء أمور مسجلة حتى الآن.</p><p className="mx-auto mt-2 max-w-xl text-xs leading-6 text-[#71849b]">إذا وصلتنا طلبات مساعدة تعليمية، فستظهر في صفحة «طلبات أولياء الأمور». إرسال الطلب لا ينشئ حسابًا على المنصة تلقائيًا.</p><a href="/admin/parent-requests" className="mt-4 inline-flex rounded-xl border border-[#dfe8f2] bg-white px-4 py-2.5 text-xs font-extrabold text-[#3974ff] hover:bg-[#f4f9ff]">عرض طلبات أولياء الأمور</a></div>
+      :filtered.length===0?<div className="rounded-2xl bg-[#f8fbfd] p-8 text-center text-sm font-bold text-[#71849b]">لا توجد حسابات مطابقة للبحث. جرّبي اسمًا أو بريدًا أو رقم هاتف مختلفًا.</div>
+      :<div className="overflow-x-auto rounded-2xl border border-[#e5ecf4]"><table className="w-full min-w-[600px] text-right text-xs"><thead className="bg-[#f8fbff] text-[#8da0b9]"><tr><th className="px-4 py-3">الاسم</th><th className="px-4 py-3">البريد الإلكتروني</th><th className="px-4 py-3">الهاتف</th><th className="px-4 py-3">المدينة / الدولة</th><th className="px-4 py-3">الحالة</th></tr></thead><tbody>{filtered.map(x=><tr key={x.id} className="border-t border-[#edf1f6]"><td className="px-4 py-4 font-extrabold">{x.full_name||"بدون اسم"}</td><td className="px-4 py-4" dir="ltr">{x.email||"—"}</td><td className="px-4 py-4" dir="ltr">{x.phone||"—"}</td><td className="px-4 py-4">{[x.city,x.country].filter(Boolean).join("، ")||"—"}</td><td className="px-4 py-4">{x.account_status==="active"?"نشط":x.account_status==="suspended"?"موقوف":x.account_status==="deactivated"?"معطّل":x.account_status||"—"}</td></tr>)}</tbody></table></div>}
+    </div>
   </section>;
 }
 
