@@ -16,7 +16,9 @@ import TeacherBooking from "./pages/TeacherBooking";
 import TeacherAvailabilitySupabase from "./pages/TeacherAvailabilitySupabase";
 import TeacherBookings from "./pages/TeacherBookings";
 import StudentBookings from "./pages/StudentBookings";
-import PaymentResult from "./pages/PaymentResult";\nimport ParentRequest from "./pages/ParentRequest";\nimport ParentRequestsAdmin from "./pages/ParentRequestsAdmin";
+import PaymentResult from "./pages/PaymentResult";
+import ParentRequest from "./pages/ParentRequest";
+import ParentRequestsAdmin from "./pages/ParentRequestsAdmin";
 
 export default function App() {
   return (
@@ -27,7 +29,9 @@ export default function App() {
           <AuthProvider>
             <Switch>
               <Route path="/" component={Home} />
-              <Route path="/auth" component={Auth} />\n              <Route path="/parent-request" component={ParentRequest} />\n              <Route path="/admin/parent-requests" component={ParentRequestsAdmin} />
+              <Route path="/auth" component={Auth} />
+              <Route path="/parent-request" component={ParentRequest} />
+              <Route path="/admin/parent-requests" component={ParentRequestsAdmin} />
               <Route path="/teacher/register" component={TeacherRegister} />
               <Route path="/teachers" component={Teachers} />
               <Route path="/book/:id" component={TeacherBooking} />
