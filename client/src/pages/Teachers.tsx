@@ -18,8 +18,8 @@ type Teacher = {
   currency: string;
 };
 
-const stages = ["ابتدائي", "إعدادي", "ثانوي", "جامعي"];
-const subjectsByStage: Record<string, string[]> = {
+const stages = ["روضة", "ابتدائي", "إعدادي", "ثانوي", "جامعي"];
+const subjectsByStage: Record<string, string[]> = {\n  "روضة": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "حاسب آلي"],
   "ابتدائي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي", "قرآن كريم", "تجويد"],
   "إعدادي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي", "برمجة", "فقه", "أصول الدين", "قرآن كريم", "تجويد"],
   "ثانوي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "فيزياء", "كيمياء", "أحياء", "جيولوجيا", "تاريخ", "جغرافيا", "فلسفة ومنطق", "علم نفس واجتماع", "فقه", "أصول الدين", "قرآن كريم", "تجويد"],
@@ -117,7 +117,7 @@ export default function Teachers() {
         const normalized = value.trim().toLowerCase()
           .replace(/[أإآ]/g, "ا")
           .replace(/ى/g, "ي");
-        if (normalized.includes("ابتدائي") || normalized.includes("primary") || normalized.includes("elementary")) return "ابتدائي";
+        if (normalized.includes("روضة") || normalized.includes("kindergarten") || normalized.includes("preschool")) return "روضة";\n        if (normalized.includes("ابتدائي") || normalized.includes("primary") || normalized.includes("elementary")) return "ابتدائي";
         if (normalized.includes("اعدادي") || normalized.includes("preparatory") || normalized.includes("middle")) return "اعدادي";
         if (normalized.includes("ثانوي") || normalized.includes("secondary") || normalized.includes("high school")) return "ثانوي";
         if (normalized.includes("جامعي") || normalized.includes("university") || normalized.includes("college")) return "جامعي";
