@@ -4,6 +4,8 @@ import { MessageCircle, RefreshCw, ShieldAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
+type TeacherOption = { id: string; display_name: string | null; subjects: string[] | null; education_stages: string[] | null };
+
 type ParentRequestRow = {
   id: string; parent_name: string; country: string; dial_code: string; phone: string;
   stages: string[]; subjects: string[]; notes: string | null; assigned_teacher: string | null; follow_up_notes: string | null; status: "new" | "contacted" | "closed"; created_at: string;
@@ -12,6 +14,7 @@ type ParentRequestRow = {
 export default function ParentRequestsAdmin() {
   const { profile, loading } = useAuth();
   const [rows, setRows] = useState<ParentRequestRow[]>([]);
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
   const [busy, setBusy] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [success, setSuccess] = useState("");
@@ -24,7 +27,18 @@ export default function ParentRequestsAdmin() {
     else setRows((data ?? []) as ParentRequestRow[]);
     setBusy(false);
   }
-  useEffect(() => { if (profile && ["admin", "super_admin", "support"].includes(profile.role)) void load(); }, [profile]);
+  useEffect(() => {
+    if (profile && ["admin", "super_admin", "support"].includes(profile.role)) {
+      void load();
+      void supabase.from("public_teacher_directory")
+        .select("id,display_name,subjects,education_stages")
+        .order("display_name", { ascending: true })
+        .then(({ data, error }) => {
+          if (error) { console.error("تعذر تحميل قائمة المعلمين", error); setTeachers([]); }
+          else setTeachers((data ?? []) as TeacherOption[]);
+        });
+    }
+  }, [profile]);
 
   function whatsappUrl(row: ParentRequestRow) {
     const dial = (row.dial_code || "").replace(/\D/g, "");
@@ -72,7 +86,7 @@ export default function ParentRequestsAdmin() {
       <select aria-label="حالة الطلب" value={row.status} onChange={e => void changeStatus(row.id, e.target.value as ParentRequestRow["status"])} className="rounded-lg border bg-background px-3 py-2"><option value="new">جديد</option><option value="contacted">تم التواصل</option><option value="closed">مغلق</option></select></div>
       <div className="mt-4 grid gap-4 sm:grid-cols-2"><div><b className="text-sm">المراحل</b><p className="mt-1 text-sm">{row.stages.join("، ")}</p></div><div><b className="text-sm">المواد</b><p className="mt-1 text-sm">{row.subjects.join("، ")}</p></div></div>
       {row.notes && <p className="mt-4 rounded-xl bg-muted p-3 text-sm leading-6"><b>ملاحظات ولي الأمر:</b> {row.notes}</p>}
-      <div className="mt-5 border-t pt-4"><h3 className="font-bold">متابعة الطلب</h3><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-sm font-semibold">اسم المعلم المرشح<input value={row.assigned_teacher ?? ""} onChange={e => editFollowUp(row.id, "assigned_teacher", e.target.value)} placeholder="اكتبي اسم المعلم أو اتركيه فارغًا" className="mt-1 w-full rounded-xl border bg-background px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-primary/30" /></label><label className="text-sm font-semibold">ملاحظات المتابعة<textarea value={row.follow_up_notes ?? ""} onChange={e => editFollowUp(row.id, "follow_up_notes", e.target.value)} placeholder="مثال: تم التواصل، الصف الدراسي، المواعيد المناسبة..." rows={2} className="mt-1 w-full resize-y rounded-xl border bg-background px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-primary/30" /></label></div><button onClick={() => void saveFollowUp(row)} disabled={savingId === row.id} className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{savingId === row.id ? "جارٍ الحفظ..." : "حفظ بيانات المتابعة"}</button></div>
+      <div className="mt-5 border-t pt-4"><h3 className="font-bold">متابعة الطلب</h3><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-sm font-semibold">اختيار المعلم المرشح<select value={row.assigned_teacher ?? ""} onChange={e => editFollowUp(row.id, "assigned_teacher", e.target.value)} className="mt-1 w-full rounded-xl border bg-background px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-primary/30"><option value="">اختاري معلمًا من القائمة</option>{teachers.map(teacher => <option key={teacher.id} value={teacher.display_name || teacher.id}>{teacher.display_name || "معلم بدون اسم"}{teacher.subjects?.length ? ` — ${teacher.subjects.join("، ")}` : ""}</option>)}</select>{teachers.length === 0 && <span className="mt-1 block text-xs font-normal text-muted-foreground">لا توجد ملفات معلمين ظاهرة في الدليل العام حاليًا؛ تأكدي من وجود معلمين معتمدين.</span>}</label><label className="text-sm font-semibold">ملاحظات المتابعة<textarea value={row.follow_up_notes ?? ""} onChange={e => editFollowUp(row.id, "follow_up_notes", e.target.value)} placeholder="مثال: تم التواصل، الصف الدراسي، المواعيد المناسبة..." rows={2} className="mt-1 w-full resize-y rounded-xl border bg-background px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-primary/30" /></label></div><button onClick={() => void saveFollowUp(row)} disabled={savingId === row.id} className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{savingId === row.id ? "جارٍ الحفظ..." : "حفظ بيانات المتابعة"}</button></div>
     </article>)}</div>
   </div></main>;
 }
