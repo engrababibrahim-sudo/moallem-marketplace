@@ -39,7 +39,7 @@ export default function PaymentResult(){
       <section className="w-full rounded-[2rem] bg-white p-8 text-center shadow-sm">
         {loading?<><Clock3 className="mx-auto h-12 w-12 animate-pulse text-[#3974ff]"/><h1 className="mt-5 text-2xl font-black">جارٍ التحقق من الدفع...</h1></>:
         !bookingId?<><XCircle className="mx-auto h-12 w-12 text-red-500"/><h1 className="mt-5 text-2xl font-black">بيانات الدفع غير مكتملة</h1></>:
-        paid?<><CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500"/><h1 className="mt-5 text-2xl font-black">تم الدفع بنجاح</h1><p className="mt-3 text-sm leading-7 text-black/55">تم تأكيد الدفع للحجز. قيمة الحجز {booking?.total_price??"—"} {booking?.currency||""}.</p></>:
+        paid?<><CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500"/><h1 className="mt-5 text-2xl font-black">تم تسجيل الدفع التجريبي</h1><p className="mt-3 text-sm leading-7 text-black/55">هذه نتيجة محاكاة داخلية للاختبار فقط؛ لم يتم خصم أو تحصيل أي أموال حقيقية. قيمة الحجز {booking?.total_price??"—"} {booking?.currency||""}.</p></>:
         failed?<><XCircle className="mx-auto h-14 w-14 text-red-500"/><h1 className="mt-5 text-2xl font-black">تعذر إتمام الدفع</h1><p className="mt-3 text-sm leading-7 text-black/55">يمكنك العودة إلى الحجوزات والمحاولة مرة أخرى.</p></>:
         refunded?<><XCircle className="mx-auto h-14 w-14 text-amber-500"/><h1 className="mt-5 text-2xl font-black">تم رد المبلغ</h1></>:
         <><Clock3 className="mx-auto h-14 w-14 text-amber-500"/><h1 className="mt-5 text-2xl font-black">جاري تأكيد الدفع</h1><p className="mt-3 text-sm leading-7 text-black/55">قد يستغرق تأكيد العملية لحظات. سنعتمد على إشعار بوابة الدفع لتحديث الحالة.</p></>}
