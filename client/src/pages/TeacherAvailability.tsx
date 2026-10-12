@@ -83,6 +83,26 @@ export default function TeacherAvailability() {
       return;
     }
 
+    // Prevent exact duplicates in the current teacher availability list.
+    const duplicate = (availability.data ?? []).some((slot: {
+      dayOfWeek: number | null;
+      specificDate: string | null;
+      startTime: string;
+      endTime: string;
+      timezone: string;
+    }) =>
+      (slot.dayOfWeek ?? null) === (hasDay ? Number(form.dayOfWeek) : null) &&
+      (slot.specificDate ?? null) === (hasDate ? form.specificDate : null) &&
+      slot.startTime === form.startTime &&
+      slot.endTime === form.endTime &&
+      slot.timezone === form.timezone
+    );
+
+    if (duplicate) {
+      setError("هذا الموعد مضاف بالفعل بنفس اليوم والوقت والمنطقة الزمنية.");
+      return;
+    }
+
     await createAvailability.mutateAsync({
       dayOfWeek: hasDay ? Number(form.dayOfWeek) : null,
       specificDate: hasDate ? form.specificDate : null,
