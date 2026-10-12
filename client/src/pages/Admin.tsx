@@ -136,7 +136,7 @@ function Dashboard(){
   },[]);;
 
   const roleTotal=Math.max(s.users,1);
-  const roleData=[
+  const roleData: [string, number, string][] = [
     ["طلاب",s.students,"#3b82f6"],
     ["أولياء أمور",s.parents,"#22c55e"],
     ["معلمون",s.teachers,"#8b5cf6"],
