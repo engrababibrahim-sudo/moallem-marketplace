@@ -34,7 +34,6 @@ export default async function handler(req: any, res: any) {
       return send(res, 403, { error: "ليس لديك صلاحية عرض تقارير الحضور." });
     }
 
-    // Load original Zoom sessions, then attach continuation meetings to the same booking.
     const { data: sessions, error: sessionsError } = await admin.from("live_sessions")
       .select("booking_id,provider_meeting_id,status,scheduled_start_at,scheduled_end_at,bookings(id,subject,start_at,end_at,status,payment_status,student_id,teacher_id)")
       .eq("provider", "zoom").order("scheduled_start_at", { ascending: false }).limit(100);
@@ -48,10 +47,6 @@ export default async function handler(req: any, res: any) {
       : { data: [], error: null };
     if (segmentsError) throw segmentsError;
 
-    const meetingIds = [...new Set([
-      ...(sessions || []).map((s: any) => s.provider_meeting_id),
-      ...(segments || []).map((s: any) => s.provider_meeting_id),
-    ].filter(Boolean).map(String))];
     const { data: events, error: eventsError } = bookingIds.length
       ? await admin.from("zoom_attendance_events")
           .select("booking_id,provider_meeting_id,event_type,participant_name,participant_email,participant_user_id,event_time")
@@ -73,23 +68,50 @@ export default async function handler(req: any, res: any) {
       if (!sessionsByBooking.has(s.booking_id)) sessionsByBooking.set(s.booking_id, s);
     }
 
-    // One report card per booking. Events remain stored with their actual Zoom meeting ID,
-    // but both the original and continuation meeting events are presented as one lesson.
+    // Events are enriched with the scheduled period of the exact Zoom meeting.
+    // A 15-minute grace period is used for early starts and overruns; events are never discarded.
     const grouped = [...sessionsByBooking.values()].map((s: any) => {
       const booking = s.bookings;
       const bookingSegments = (segments || []).filter((segment: any) => segment.booking_id === s.booking_id);
-      const lessonMeetingIds = new Set([
-        s.provider_meeting_id,
-        ...bookingSegments.map((segment: any) => segment.provider_meeting_id),
-      ].filter(Boolean).map(String));
+      const meetingPeriods = [
+        {
+          meeting_id: s.provider_meeting_id ? String(s.provider_meeting_id) : null,
+          label: "الاجتماع الأصلي",
+          start: s.scheduled_start_at || null,
+          end: s.scheduled_end_at || null,
+        },
+        ...bookingSegments.map((segment: any) => ({
+          meeting_id: segment.provider_meeting_id ? String(segment.provider_meeting_id) : null,
+          label: `اجتماع الاستكمال رقم ${segment.segment_number}`,
+          start: segment.scheduled_start_at || null,
+          end: segment.scheduled_end_at || null,
+        })),
+      ].filter((period: any) => period.meeting_id);
+
+      const lessonMeetingIds = new Set(meetingPeriods.map((period: any) => period.meeting_id));
       const lessonEvents = (events || []).filter((event: any) =>
         event.booking_id === s.booking_id &&
         (lessonMeetingIds.size === 0 || lessonMeetingIds.has(String(event.provider_meeting_id || "")))
-      );
-      const times = [
-        { start: s.scheduled_start_at, end: s.scheduled_end_at },
-        ...bookingSegments.map((segment: any) => ({ start: segment.scheduled_start_at, end: segment.scheduled_end_at })),
-      ].filter((period: any) => period.start && period.end);
+      ).map((event: any) => {
+        const period = meetingPeriods.find((item: any) =>
+          item.meeting_id === String(event.provider_meeting_id || "")
+        );
+        const eventMs = event.event_time ? new Date(event.event_time).getTime() : NaN;
+        const startMs = period?.start ? new Date(period.start).getTime() : NaN;
+        const endMs = period?.end ? new Date(period.end).getTime() : NaN;
+        const hasPeriod = Number.isFinite(eventMs) && Number.isFinite(startMs) && Number.isFinite(endMs);
+        const graceMs = 15 * 60 * 1000;
+        return {
+          ...event,
+          meeting_label: period?.label || "اجتماع غير محدد",
+          meeting_scheduled_start_at: period?.start || null,
+          meeting_scheduled_end_at: period?.end || null,
+          outside_scheduled_window: hasPeriod
+            ? eventMs < startMs - graceMs || eventMs > endMs + graceMs
+            : null,
+        };
+      });
+
       return {
         booking_id: s.booking_id,
         meeting_id: s.provider_meeting_id,
@@ -104,7 +126,7 @@ export default async function handler(req: any, res: any) {
         events: lessonEvents,
         meeting_count: lessonMeetingIds.size,
         continuation_count: bookingSegments.length,
-        meeting_periods: times,
+        meeting_periods: meetingPeriods,
       };
     }).sort((a: any, b: any) =>
       new Date(b.scheduled_start_at).getTime() - new Date(a.scheduled_start_at).getTime()
