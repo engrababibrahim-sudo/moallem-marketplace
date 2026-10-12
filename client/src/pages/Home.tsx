@@ -214,7 +214,7 @@ export default function Home() {
 
           <div className="hidden items-center gap-2.5 md:flex">
             <Link href="/auth" className="rounded-full px-4 py-2.5 text-sm font-bold hover:bg-white">تسجيل الدخول</Link>
-            <button onClick={openOnboarding} className="rounded-full bg-[#182431] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#182431]/10 hover:bg-[#273b4e]">ابدأ مجانًا <ArrowLeft className="mr-1 inline h-4 w-4" /></button>
+            <button onClick={openOnboarding} className="rounded-full bg-[#182431] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#182431]/10 hover:bg-[#273b4e]">ابدأ مجانًا <ArrowLeft className="mr-1 inline h-4 w-4" /></button>\n            <Link href="/parent-request" className="rounded-full border border-[#182431]/20 px-5 py-3 text-sm font-bold text-[#182431] hover:bg-[#182431]/5">اطلب مساعدة تعليمية</Link>
           </div>
 
           <button aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"} onClick={() => setMenuOpen((open) => !open)} className="rounded-xl p-2 md:hidden">
