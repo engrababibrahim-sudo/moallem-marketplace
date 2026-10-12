@@ -146,13 +146,15 @@ export default function Home() {
     ["ما نوع الدروس المفضل؟", "format", ["فردية مباشرة", "مرنة حسب الجدول", "مزيج من الاثنين"]],
     ["متى يناسبك التعلم؟", "time", ["بعد الظهر", "المساء", "نهاية الأسبوع"]],
   ] as const;
-  const gradeOptionsByStage: Record<string, string[]> = {\n    "روضة": ["المستوى الأول روضة", "المستوى الثاني روضة", "المستوى الثالث روضة"],
+  const gradeOptionsByStage: Record<string, string[]> = {
+    "روضة": ["المستوى الأول روضة", "المستوى الثاني روضة", "المستوى الثالث روضة"],
     "ابتدائي": ["الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي", "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"],
     "إعدادي": ["الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"],
     "ثانوي": ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"],
     "جامعي": ["السنة الجامعية الأولى", "السنة الجامعية الثانية", "السنة الجامعية الثالثة", "السنة الجامعية الرابعة", "دراسات عليا"],
   };
-  const subjectsByStage: Record<string, string[]> = {\n    "روضة": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "حاسب آلي"],
+  const subjectsByStage: Record<string, string[]> = {
+    "روضة": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "حاسب آلي"],
     "ابتدائي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي", "قرآن كريم", "تجويد"],
     "إعدادي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "علوم", "دراسات اجتماعية", "حاسب آلي", "برمجة", "فقه", "أصول الدين", "قرآن كريم", "تجويد"],
     "ثانوي": ["لغة عربية", "لغة إنجليزية", "رياضيات", "فيزياء", "كيمياء", "أحياء", "جيولوجيا", "تاريخ", "جغرافيا", "فلسفة ومنطق", "علم نفس واجتماع"],
@@ -214,7 +216,8 @@ export default function Home() {
 
           <div className="hidden items-center gap-2.5 md:flex">
             <Link href="/auth" className="rounded-full px-4 py-2.5 text-sm font-bold hover:bg-white">تسجيل الدخول</Link>
-            <button onClick={openOnboarding} className="rounded-full bg-[#182431] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#182431]/10 hover:bg-[#273b4e]">ابدأ مجانًا <ArrowLeft className="mr-1 inline h-4 w-4" /></button>\n            <Link href="/parent-request" className="rounded-full border border-[#182431]/20 px-5 py-3 text-sm font-bold text-[#182431] hover:bg-[#182431]/5">اطلب مساعدة تعليمية</Link>
+            <button onClick={openOnboarding} className="rounded-full bg-[#182431] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#182431]/10 hover:bg-[#273b4e]">ابدأ مجانًا <ArrowLeft className="mr-1 inline h-4 w-4" /></button>
+            <Link href="/parent-request" className="rounded-full border border-[#182431]/20 px-5 py-3 text-sm font-bold text-[#182431] hover:bg-[#182431]/5">اطلب مساعدة تعليمية</Link>
           </div>
 
           <button aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"} onClick={() => setMenuOpen((open) => !open)} className="rounded-xl p-2 md:hidden">
