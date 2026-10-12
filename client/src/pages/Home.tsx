@@ -88,10 +88,14 @@ const teachers = [
 ];
 
 const faqs = [
-  "كيف أختار المعلم المناسب؟",
-  "هل أستطيع متابعة تعلم أكثر من ابن؟",
-  "كيف يتم حجز الدرس؟",
-  "هل الأسعار المعروضة نهائية؟",
+  "ما طريقة الدراسة في مُعلّم؟",
+  "كيف أتحقق من كفاءة المعلم؟",
+  "كيف يتم الحجز بعد اختيار المعلم؟",
+  "كيف أدفع مقابل الدروس؟",
+  "ماذا لو لم يناسبني المعلم؟",
+  "هل يمكنني مشاهدة تسجيل الحصة؟",
+  "كيف أحضر الحصة عن بُعد؟",
+  "هل توجد باقات شهرية وسياسة استرداد؟",
 ];
 
 const navLinks = [
@@ -364,7 +368,7 @@ export default function Home() {
         </section>
 
         <section id="faq" className="border-y border-[#182431]/[0.06] bg-white py-20">
-          <div className="mx-auto max-w-3xl px-5"><div className="text-center"><p className="mb-3 text-sm font-bold text-[#c35a00]">الأسئلة الشائعة</p><h2 className="text-3xl font-bold sm:text-4xl">كل ما تحتاج معرفته</h2></div><div className="mt-9 space-y-3">{faqs.map((question, index) => <div key={question} className="rounded-2xl bg-[#fbf8f4] px-5"><button className="flex w-full items-center justify-between gap-4 py-5 text-right font-bold" onClick={() => setFaq(faq === index ? null : index)}>{question}<ChevronDown className={`h-5 w-5 shrink-0 transition-transform ${faq === index ? "rotate-180" : ""}`} /></button>{faq === index && <p className="pb-5 text-sm leading-7 text-[#182431]/60">{["ابدأ بتحديد المادة والمرحلة، ثم راجع خبرة المعلم وطريقة تدريسه والتوفر والسعر قبل إرسال طلب الحجز.", "يمكنك استخدام حساب ولي الأمر لمتابعة ملفات الأبناء وطلبات الحجز المرتبطة بالحساب، وفق الصلاحيات المتاحة.", "اختر المعلم والموعد المتاح، ثم أرسل طلب الحجز وتابع حالته من مساحة حسابك.", "يعرض ملف المعلم السعر ومدة الحصة المتاحة. راجع التفاصيل قبل تأكيد طلبك."][index]}</p>}</div>)}</div></div>
+          <div className="mx-auto max-w-3xl px-5"><div className="text-center"><p className="mb-3 text-sm font-bold text-[#c35a00]">الأسئلة الشائعة</p><h2 className="text-3xl font-bold sm:text-4xl">كل ما تحتاج معرفته</h2></div><div className="mt-9 space-y-3">{faqs.map((question, index) => <div key={question} className="rounded-2xl bg-[#fbf8f4] px-5"><button className="flex w-full items-center justify-between gap-4 py-5 text-right font-bold" onClick={() => setFaq(faq === index ? null : index)}>{question}<ChevronDown className={`h-5 w-5 shrink-0 transition-transform ${faq === index ? "rotate-180" : ""}`} /></button>{faq === index && <p className="pb-5 text-sm leading-7 text-[#182431]/60">{["اختر المادة والمرحلة التعليمية، ثم قارن بين المعلمين من خلال بيانات ملفاتهم والمواعيد والأسعار المعروضة.", "راجع التخصص والمواد والمراحل والخبرة المذكورة في ملف المعلم. لا تعتمد على أي ضمان أو اعتماد إلا إذا كان ظاهرًا بوضوح في المنصة.", "اختر موعدًا متاحًا وأرسل طلب الحجز، ثم تابع حالته من حسابك. لا تعتبر الحجز مؤكدًا إلا عندما تظهر حالته مؤكدة.", "استخدم فقط وسيلة الدفع التي تظهر فعليًا داخل المنصة. لا ترسل بيانات بطاقتك أو أموالك خارج قناة دفع موثوقة، وتحقق من حالة العملية قبل اعتبارها ناجحة.", "تواصل مع دعم المنصة لشرح المشكلة. استبدال المعلم أو استرداد المبلغ ليس مضمونًا إلا إذا كانت شروط الخدمة المنشورة تنص على ذلك.", "لا تفترض أن الحصة مسجلة. التسجيل لا يكون متاحًا إلا إذا ظهر رابط تسجيل فعلي وكانت آلية التسجيل وموافقة المشاركين واضحة.", "بعد تأكيد الحجز، راجع تفاصيله بحثًا عن رابط الحصة أو تعليمات الانضمام. إذا لم تظهر، تواصل مع الدعم قبل موعد الدرس.", "راجع تفاصيل السعر وشروط الإلغاء والاسترداد قبل الدفع. لا تفترض وجود باقات شهرية أو استرداد تلقائي ما لم تكن هذه الخيارات والشروط معروضة ومفعلة داخل المنصة."][index]}</p>}</div>)}</div></div>
         </section>
       </main>
 
