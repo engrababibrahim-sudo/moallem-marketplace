@@ -161,7 +161,22 @@ export default function TeacherBooking() {
         });
     }
 
-    return out;
+    // Some teachers have overlapping or duplicated availability rows.
+    // Collapse identical date/time slots so students only see each option once.
+    const unique = new Map<string, Slot>();
+    for (const slot of out) {
+      const key = `${slot.date}|${slot.start}|${slot.end}`;
+      if (!unique.has(key)) unique.set(key, slot);
+    }
+
+    // Hide slots that have already started, including today's earlier slots.
+    const now = new Date();
+    return [...unique.values()].filter((slot) => {
+      const [year, month, day] = slot.date.split("-").map(Number);
+      const [hour, minute] = slot.start.split(":").map(Number);
+      const slotStart = new Date(year, month - 1, day, hour, minute, 0);
+      return slotStart > now;
+    });
   }, [availability]);
 
   async function createBooking() {
