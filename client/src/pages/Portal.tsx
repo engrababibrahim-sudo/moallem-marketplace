@@ -15,9 +15,9 @@ export default function Portal() {
 
   useEffect(()=>{ let active=true;
     supabase.from("teacher_profiles")
-      .select("id,display_name,bio,years_experience,hourly_rate,currency,subjects")
+      .select("id,display_name,bio,country,years_experience,hourly_rate,currency,subjects")
       .eq("verification_status","approved").order("created_at",{ascending:false}).limit(24)
-      .then(({data})=>{ if(!active)return; setTeachers((data ?? []).map((x: { id: string; display_name: string | null; bio: string | null; years_experience: number; hourly_rate: number | null; subjects: string[] | null }) => ({ id: x.id, display_name: x.display_name ?? "معلم", bio: x.bio, years_experience: x.years_experience, hourly_rate: x.hourly_rate, subjects: x.subjects ?? [], city: null }))); setLoading(false);});
+      .then(({data})=>{ if(!active)return; setTeachers((data ?? []).map((x: { id: string; display_name: string | null; bio: string | null; country: string | null; years_experience: number; hourly_rate: number | null; currency: string | null; subjects: string[] | null }) => ({ id: x.id, display_name: x.display_name ?? "معلم", bio: x.bio, years_experience: x.years_experience, hourly_rate: x.hourly_rate, subjects: x.subjects ?? [], city: null, country: x.country, currency: x.currency ?? "EGP" }))); setLoading(false);});
     return()=>{active=false};
   },[]);
 
