@@ -14,6 +14,7 @@ type Booking = {
 };
 
 type ZoomMeeting = { id?: number; join_url?: string; start_url?: string };
+type ZoomMeetingDetails = { host_email?: string; host_id?: string };
 type ZoomToken = { access_token?: string };
 
 function json(res: any, status: number, body: unknown) {
@@ -199,7 +200,31 @@ export default async function handler(req: any, res: any) {
       console.error("Live session lookup error", existingError);
       return json(res, 500, { error: "تعذر التحقق من اجتماع الحصة." });
     }
-    if (existing) {
+    const teacherZoomUserId = String(authData.user.email || "").trim().toLowerCase();
+    if (!teacherZoomUserId) {
+      return json(res, 400, { error: "لا يوجد بريد إلكتروني بحساب المعلم لاستخدامه مع Zoom." });
+    }
+
+    // Reuse an existing session only if Zoom confirms that its host is the assigned teacher.
+    // Otherwise create a replacement for the teacher's Zoom user and update the saved session.
+    let existingHostMatches = false;
+    if (existing?.provider === "zoom" && existing.provider_meeting_id) {
+      try {
+        const token = await getZoomToken();
+        const detailResponse = await fetch(
+          "https://api.zoom.us/v2/meetings/" + encodeURIComponent(String(existing.provider_meeting_id)),
+          { headers: { Authorization: "Bearer " + token } }
+        );
+        const detail = (await detailResponse.json().catch(() => null)) as ZoomMeetingDetails | null;
+        existingHostMatches = Boolean(
+          detailResponse.ok && detail?.host_email &&
+          detail.host_email.trim().toLowerCase() === teacherZoomUserId
+        );
+      } catch (error) {
+        console.error("Unable to verify existing Zoom host", error);
+      }
+    }
+    if (existing && existingHostMatches) {
       return json(res, 200, {
         created: false,
         session: {
@@ -209,30 +234,62 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const teacherZoomUserId = String(authData.user.email || "").trim();
-    if (!teacherZoomUserId) {
-      return json(res, 400, { error: "لا يوجد بريد إلكتروني بحساب المعلم لاستخدامه مع Zoom." });
+    let meeting;
+    try {
+      meeting = await createZoomMeeting(typedBooking, teacherZoomUserId);
+    } catch (error) {
+      console.error("Zoom meeting creation for teacher failed", error);
+      return json(res, 502, {
+        error: "لم نستطع إنشاء اجتماع باسم المعلم. تأكدي أن بريد المعلم نفسه مضاف كمستخدم في حساب Zoom الخاص بالمنصة، وأن تطبيق Zoom لديه صلاحية meeting:write:admin. لم يتم حذف الاجتماع القديم.",
+      });
     }
-    const meeting = await createZoomMeeting(typedBooking, teacherZoomUserId);
-    const { data: session, error: sessionError } = await admin
-      .from("live_sessions")
-      .insert({
-        booking_id: typedBooking.id,
-        provider: "zoom",
-        provider_meeting_id: meeting.providerMeetingId,
-        join_url: meeting.joinUrl,
-        host_url: meeting.hostUrl,
-        status: "scheduled",
-        scheduled_start_at: typedBooking.start_at,
-        scheduled_end_at: typedBooking.end_at,
-      })
-      .select("id,booking_id,provider,provider_meeting_id,join_url,host_url,status,scheduled_start_at,scheduled_end_at")
-      .single();
+
+    let session: any;
+    let sessionError: any;
+    if (existing) {
+      const result = await admin
+        .from("live_sessions")
+        .update({
+          provider: "zoom",
+          provider_meeting_id: meeting.providerMeetingId,
+          join_url: meeting.joinUrl,
+          host_url: meeting.hostUrl,
+          status: "scheduled",
+          scheduled_start_at: typedBooking.start_at,
+          scheduled_end_at: typedBooking.end_at,
+        })
+        .eq("id", existing.id)
+        .select("id,booking_id,provider,provider_meeting_id,join_url,host_url,status,scheduled_start_at,scheduled_end_at")
+        .single();
+      session = result.data;
+      sessionError = result.error;
+    } else {
+      const result = await admin
+        .from("live_sessions")
+        .insert({
+          booking_id: typedBooking.id,
+          provider: "zoom",
+          provider_meeting_id: meeting.providerMeetingId,
+          join_url: meeting.joinUrl,
+          host_url: meeting.hostUrl,
+          status: "scheduled",
+          scheduled_start_at: typedBooking.start_at,
+          scheduled_end_at: typedBooking.end_at,
+        })
+        .select("id,booking_id,provider,provider_meeting_id,join_url,host_url,status,scheduled_start_at,scheduled_end_at")
+        .single();
+      session = result.data;
+      sessionError = result.error;
+    }
 
     if (sessionError || !session) {
       await cancelZoomMeeting(meeting.providerMeetingId);
       console.error("Live session database error", sessionError);
-      return json(res, 500, { error: "تعذر حفظ اجتماع الحصة." });
+      return json(res, 500, { error: "تعذر حفظ اجتماع الحصة. لم يتم استبدال الرابط المحفوظ." });
+    }
+
+    if (existing?.provider_meeting_id) {
+      await cancelZoomMeeting(String(existing.provider_meeting_id));
     }
 
     if (!typedBooking.meeting_provider) {
