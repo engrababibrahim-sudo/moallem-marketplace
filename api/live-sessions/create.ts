@@ -205,26 +205,10 @@ export default async function handler(req: any, res: any) {
       return json(res, 400, { error: "لا يوجد بريد إلكتروني بحساب المعلم لاستخدامه مع Zoom." });
     }
 
-    // Reuse an existing session only if Zoom confirms that its host is the assigned teacher.
-    // Otherwise create a replacement for the teacher's Zoom user and update the saved session.
-    let existingHostMatches = false;
-    if (existing?.provider === "zoom" && existing.provider_meeting_id) {
-      try {
-        const token = await getZoomToken();
-        const detailResponse = await fetch(
-          "https://api.zoom.us/v2/meetings/" + encodeURIComponent(String(existing.provider_meeting_id)),
-          { headers: { Authorization: "Bearer " + token } }
-        );
-        const detail = (await detailResponse.json().catch(() => null)) as ZoomMeetingDetails | null;
-        existingHostMatches = Boolean(
-          detailResponse.ok && detail?.host_email &&
-          detail.host_email.trim().toLowerCase() === teacherZoomUserId
-        );
-      } catch (error) {
-        console.error("Unable to verify existing Zoom host", error);
-      }
-    }
-    if (existing && existingHostMatches) {
+    // Preserve an existing Zoom session. Do not replace or cancel a working meeting
+    // merely because Zoom's host_email differs from the teacher's marketplace email.
+    // The teacher can use the already-saved host URL; explicit repair should not destroy it.
+    if (existing?.provider === "zoom" && existing.provider_meeting_id && existing.join_url) {
       return json(res, 200, {
         created: false,
         session: {
