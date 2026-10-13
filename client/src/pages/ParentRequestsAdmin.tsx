@@ -64,6 +64,19 @@ export default function ParentRequestsAdmin() {
     setSavingId(null);
   }
 
+  async function markContactedFromWhatsApp(id: string) {
+    const row = rows.find(item => item.id === id);
+    if (!row || row.status !== "new") return;
+    // Update the status when the admin opens the WhatsApp contact link.
+    const { error } = await supabase.from("parent_requests").update({ status: "contacted" }).eq("id", id);
+    if (error) {
+      setError("تم فتح واتساب، لكن تعذر تحديث حالة الطلب تلقائيًا. حدّثي الحالة يدويًا.");
+      return;
+    }
+    setRows(old => old.map(item => item.id === id ? { ...item, status: "contacted" } : item));
+    setSuccess(`تم تحويل طلب ${row.parent_name} إلى «تم التواصل» عند فتح واتساب.`);
+  }
+
   async function changeStatus(id: string, status: ParentRequestRow["status"]) {
     const { error } = await supabase.from("parent_requests").update({ status }).eq("id", id);
     if (error) setError("تعذر تحديث حالة الطلب. راجعي سياسات الصلاحيات في Supabase.");
@@ -80,7 +93,7 @@ export default function ParentRequestsAdmin() {
     {!busy && rows.length === 0 && !error && <p className="mt-6 rounded-xl border p-8 text-center text-muted-foreground">لا توجد طلبات حتى الآن.</p>}
     <div className="mt-6 space-y-4">{rows.map(row => <article key={row.id} className="rounded-2xl border bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{row.parent_name}</h2><p className="mt-1 text-sm text-muted-foreground">{row.country} · {row.dial_code} {row.phone}</p>
-        <a href={whatsappUrl(row)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-sm font-bold text-white hover:bg-[#1fb85a]">
+        <a href={whatsappUrl(row)} target="_blank" rel="noreferrer" onClick={() => { if (row.status === "new") void markContactedFromWhatsApp(row.id); }} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-sm font-bold text-white hover:bg-[#1fb85a]">
           <MessageCircle className="h-4 w-4" /> التواصل عبر واتساب
         </a><p className="mt-1 text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString("ar-EG")}</p></div>
       <select aria-label="حالة الطلب" value={row.status} onChange={e => void changeStatus(row.id, e.target.value as ParentRequestRow["status"])} className="rounded-lg border bg-background px-3 py-2"><option value="new">جديد</option><option value="contacted">تم التواصل</option><option value="closed">مغلق</option></select></div>
