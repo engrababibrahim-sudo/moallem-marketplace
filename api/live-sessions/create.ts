@@ -98,6 +98,22 @@ async function createZoomMeeting(booking: Booking, teacherZoomUserId: string) {
   };
 }
 
+async function existingMeetingBelongsToTeacher(id: string, teacherEmail: string): Promise<boolean> {
+  try {
+    const token = await getZoomToken();
+    const response = await fetch(
+      "https://api.zoom.us/v2/meetings/" + encodeURIComponent(id),
+      { headers: { Authorization: "Bearer " + token } }
+    );
+    if (!response.ok) return false;
+    const meeting = (await response.json().catch(() => null)) as { host_email?: string } | null;
+    return String(meeting?.host_email || "").trim().toLowerCase() === teacherEmail;
+  } catch (error) {
+    console.error("Zoom existing meeting verification failed", error);
+    return false;
+  }
+}
+
 async function cancelZoomMeeting(id: string) {
   try {
     const token = await getZoomToken();
@@ -204,10 +220,27 @@ export default async function handler(req: any, res: any) {
       return json(res, 400, { error: "لا يوجد بريد إلكتروني بحساب المعلم لاستخدامه مع Zoom." });
     }
 
-    // Re-create the meeting under the assigned teacher's Zoom user when a saved
-    // session already exists. Keep the previous Zoom meeting alive until the new
-    // teacher-owned meeting has been saved successfully.
+    // Reuse a saved meeting when Zoom confirms that it is still owned by this
+    // teacher. This prevents duplicate meetings and keeps the student's link stable.
+    if (
+      existing?.provider === "zoom" &&
+      existing.provider_meeting_id &&
+      existing.join_url &&
+      existing.host_url &&
+      await existingMeetingBelongsToTeacher(String(existing.provider_meeting_id), teacherZoomUserId)
+    ) {
+      return json(res, 200, {
+        created: false,
+        reused: true,
+        session: {
+          ...existing,
+          host_url: existing.host_url,
+        },
+      });
+    }
 
+    // If the saved meeting is missing or belongs to another Zoom user, create
+    // a replacement owned by the assigned teacher and only then update the DB.
     let meeting;
     try {
       meeting = await createZoomMeeting(typedBooking, teacherZoomUserId);
