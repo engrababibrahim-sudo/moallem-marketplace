@@ -1,0 +1,8 @@
+import { createClient } from "@supabase/supabase-js";
+function json(res:any,status:number,body:unknown){res.setHeader("Content-Type","application/json; charset=utf-8");return res.status(status).json(body);}
+export default async function handler(req:any,res:any){
+ if(req.method!=="GET"){res.setHeader("Allow","GET");return json(res,405,{error:"طريقة الطلب غير مدعومة."});}
+ const auth=String(req.headers?.authorization||"");const url=process.env.SUPABASE_URL||process.env.VITE_SUPABASE_URL;const anon=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.VITE_SUPABASE_PUBLISHABLE_KEY;const service=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ if(!auth.startsWith("Bearer ")||!url||!anon||!service)return json(res,401,{error:"يجب تسجيل الدخول أولًا."});
+ try{const user=createClient(url,anon,{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:auth}}});const {data,error}=await user.auth.getUser();if(error||!data.user)return json(res,401,{error:"جلسة الدخول غير صالحة."});const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});const {data:profile,error:pe}=await admin.from("profiles").select("role").eq("id",data.user.id).maybeSingle();if(pe)throw pe;if(profile?.role!=="teacher")return json(res,403,{error:"هذه الخدمة للمعلمين فقط."});const {data:connection,error:ce}=await admin.from("teacher_zoom_connections").select("zoom_email,connected_at,access_token_expires_at").eq("teacher_id",data.user.id).maybeSingle();if(ce)throw ce;return json(res,200,{connected:!!connection,zoom_email:connection?.zoom_email||null,connected_at:connection?.connected_at||null});}catch(e){console.error("Zoom status failed",e);return json(res,500,{error:"تعذر التحقق من حالة ربط Zoom."});}
+}
