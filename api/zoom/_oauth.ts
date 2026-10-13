@@ -1,0 +1,9 @@
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+export function env(n:string){const v=process.env[n];if(!v)throw new Error("Missing env: "+n);return v;}
+export function redirectUri(){return process.env.ZOOM_OAUTH_REDIRECT_URI||"https://moallem-marketplace-nine.vercel.app/api/zoom/callback";}
+function key(){const b=Buffer.from(env("ZOOM_TOKEN_ENCRYPTION_KEY"),"base64");if(b.length!==32)throw new Error("ZOOM_TOKEN_ENCRYPTION_KEY must decode to 32 bytes");return b;}
+export function encrypt(s:string){const iv=randomBytes(12),c=createCipheriv("aes-256-gcm",key(),iv),d=Buffer.concat([c.update(s,"utf8"),c.final()]);return [iv.toString("base64url"),c.getAuthTag().toString("base64url"),d.toString("base64url")].join(".");}
+export function decrypt(s:string){const [i,t,d]=s.split(".");if(!i||!t||!d)throw new Error("Invalid token");const c=createDecipheriv("aes-256-gcm",key(),Buffer.from(i,"base64url"));c.setAuthTag(Buffer.from(t,"base64url"));return Buffer.concat([c.update(Buffer.from(d,"base64url")),c.final()]).toString("utf8");}
+export function signState(s:string){return createHmac("sha256",env("ZOOM_TOKEN_ENCRYPTION_KEY")).update(s).digest("base64url");}
+export function verifyState(s:string,t:string){const a=Buffer.from(signState(s)),b=Buffer.from(t);return a.length===b.length&&timingSafeEqual(a,b);}
+export async function exchangeCode(code:string){const basic=Buffer.from(env("ZOOM_OAUTH_CLIENT_ID")+":"+env("ZOOM_OAUTH_CLIENT_SECRET")).toString("base64"),r=await fetch("https://zoom.us/oauth/token",{method:"POST",headers:{Authorization:"Basic "+basic,"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:redirectUri()})}),d:any=await r.json().catch(()=>null);if(!r.ok||!d?.access_token||!d?.refresh_token)throw new Error("Zoom token exchange failed");return d;}
