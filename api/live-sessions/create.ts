@@ -15,6 +15,7 @@ type Booking = {
 
 type ZoomMeeting = { id?: number; join_url?: string; start_url?: string };
 type ZoomToken = { access_token?: string };
+type ZoomApiError = { code?: number; message?: string };
 
 function json(res: any, status: number, body: unknown) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -86,10 +87,21 @@ async function createZoomMeeting(booking: Booking, teacherZoomUserId: string) {
       },
     }),
   });
-  const data = (await response.json().catch(() => null)) as ZoomMeeting | null;
+  const data = (await response.json().catch(() => null)) as (ZoomMeeting & ZoomApiError) | null;
   if (!response.ok || !data?.id || !data.join_url || !data.start_url) {
-    console.error("Zoom create meeting error", response.status);
-    throw new Error("Unable to create the Zoom meeting.");
+    const zoomCode = typeof data?.code === "number" ? data.code : undefined;
+    const zoomMessage = String(data?.message || "Zoom did not return a meeting URL").slice(0, 240);
+    console.error("Zoom create meeting error", {
+      httpStatus: response.status,
+      zoomCode,
+      zoomMessage,
+      requestedHost: teacherZoomUserId,
+    });
+    throw new Error(
+      "ZOOM_CREATE_FAILED:" +
+      (zoomCode === undefined ? "unknown" : String(zoomCode)) +
+      ":" + zoomMessage
+    );
   }
   return {
     providerMeetingId: String(data.id),
@@ -245,9 +257,28 @@ export default async function handler(req: any, res: any) {
     try {
       meeting = await createZoomMeeting(typedBooking, teacherZoomUserId);
     } catch (error) {
-      console.error("Zoom meeting creation for teacher failed", error);
+      const detail = error instanceof Error ? error.message : "";
+      console.error("Zoom meeting creation failed", detail);
+      const match = detail.match(/^ZOOM_CREATE_FAILED:([^:]+):(.*)$/);
+      const zoomCode = match?.[1] || "";
+      const zoomMessage = match?.[2] || "";
+
+      let userMessage =
+        "رفض Zoom إنشاء الاجتماع. لم يتم حذف الاجتماع القديم.";
+      if (/user.*(not exist|does not exist|not found)|invalid.*user/i.test(zoomMessage)) {
+        userMessage =
+          "Zoom رفض إنشاء الاجتماع لأن بريد المعلم ليس مستخدمًا داخل حساب Zoom المرتبط بالمنصة. يلزم اختيار حساب مضيف موجود بالفعل؛ لا يمكن للكود إنشاء مستخدم Zoom تلقائيًا.";
+      } else if (/scope|permission|privilege|not authorized/i.test(zoomMessage) || zoomCode === "4711") {
+        userMessage =
+          "Zoom رفض الطلب بسبب صلاحيات تطبيق التكامل. سبب الرفض: " + zoomMessage;
+      } else if (zoomMessage) {
+        userMessage = "Zoom رفض إنشاء الاجتماع (رمز " + (zoomCode || "غير معروف") + "): " + zoomMessage +
+          ". لم يتم حذف الاجتماع القديم.";
+      }
+
       return json(res, 502, {
-        error: "لم نستطع إنشاء اجتماع باسم المعلم. تأكدي أن بريد المعلم نفسه مضاف كمستخدم في حساب Zoom الخاص بالمنصة، وأن تطبيق Zoom لديه صلاحية meeting:write:admin. لم يتم حذف الاجتماع القديم.",
+        error: userMessage,
+        zoom_code: zoomCode || undefined,
       });
     }
 
