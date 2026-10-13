@@ -57,14 +57,14 @@ async function getZoomToken(): Promise<string> {
   return data.access_token;
 }
 
-async function createZoomMeeting(booking: Booking) {
+async function createZoomMeeting(booking: Booking, teacherZoomUserId: string) {
   const token = await getZoomToken();
   const start = new Date(booking.start_at);
   const end = new Date(booking.end_at);
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
     throw new Error("Invalid booking date or duration.");
   }
-  const response = await fetch("https://api.zoom.us/v2/users/me/meetings", {
+  const response = await fetch("https://api.zoom.us/v2/users/" + encodeURIComponent(teacherZoomUserId) + "/meetings", {
     method: "POST",
     headers: {
       Authorization: "Bearer " + token,
@@ -169,6 +169,10 @@ export default async function handler(req: any, res: any) {
       return json(res, 404, { error: "الحجز غير موجود." });
     }
     const typedBooking = booking as Booking;
+    // Only the assigned teacher may create a host-owned Zoom meeting.
+    if (typedBooking.teacher_id !== authData.user.id) {
+      return json(res, 403, { error: "إنشاء اجتماع Zoom متاح للمعلم المسؤول عن الحجز فقط." });
+    }
     if (
       typedBooking.student_id !== authData.user.id &&
       typedBooking.teacher_id !== authData.user.id
@@ -205,7 +209,11 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const meeting = await createZoomMeeting(typedBooking);
+    const teacherZoomUserId = String(authData.user.email || "").trim();
+    if (!teacherZoomUserId) {
+      return json(res, 400, { error: "لا يوجد بريد إلكتروني بحساب المعلم لاستخدامه مع Zoom." });
+    }
+    const meeting = await createZoomMeeting(typedBooking, teacherZoomUserId);
     const { data: session, error: sessionError } = await admin
       .from("live_sessions")
       .insert({
