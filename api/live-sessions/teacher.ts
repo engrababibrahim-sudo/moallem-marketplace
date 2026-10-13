@@ -111,7 +111,7 @@ export default async function handler(req: any, res: any) {
         const { error } = await admin.from("live_sessions").update({ host_url: hostUrl }).eq("id", s.id);
         if (error) console.warn("Unable to persist refreshed Zoom host URL", error.message);
       }
-      return { ...s, host_url: hostUrl, join_url: undefined };
+      return { ...s, host_url: undefined, join_url: s.join_url ?? null };
     }));
 
     const refreshedSegments = await Promise.all((segments ?? []).map(async (s: any) => {
@@ -125,7 +125,7 @@ export default async function handler(req: any, res: any) {
           .eq("segment_number", 2);
         if (error) console.warn("Unable to persist refreshed continuation host URL", error.message);
       }
-      return { ...s, host_url: hostUrl };
+      return { ...s, host_url: undefined, join_url: s.join_url ?? null };
     }));
 
     const continuationByBooking = Object.fromEntries(refreshedSegments.map((s: any) => [s.booking_id, s]));
@@ -133,8 +133,8 @@ export default async function handler(req: any, res: any) {
       const continuation = continuationByBooking[s.booking_id];
       return {
         ...s,
-        continuation_join_url: undefined,
-        continuation_host_url: continuation?.host_url ?? null,
+        continuation_join_url: continuation?.join_url ?? null,
+        continuation_host_url: undefined,
         continuation_scheduled_start_at: continuation?.scheduled_start_at ?? null,
         continuation_scheduled_end_at: continuation?.scheduled_end_at ?? null,
       };
