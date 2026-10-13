@@ -204,18 +204,9 @@ export default async function handler(req: any, res: any) {
       return json(res, 400, { error: "لا يوجد بريد إلكتروني بحساب المعلم لاستخدامه مع Zoom." });
     }
 
-    // Preserve an existing Zoom session. Do not replace or cancel a working meeting
-    // merely because Zoom's host_email differs from the teacher's marketplace email.
-    // The teacher can use the already-saved host URL; explicit repair should not destroy it.
-    if (existing?.provider === "zoom" && existing.provider_meeting_id && existing.join_url) {
-      return json(res, 200, {
-        created: false,
-        session: {
-          ...existing,
-          host_url: typedBooking.teacher_id === authData.user.id ? existing.host_url : null,
-        },
-      });
-    }
+    // Re-create the meeting under the assigned teacher's Zoom user when a saved
+    // session already exists. Keep the previous Zoom meeting alive until the new
+    // teacher-owned meeting has been saved successfully.
 
     let meeting;
     try {
@@ -271,10 +262,9 @@ export default async function handler(req: any, res: any) {
       return json(res, 500, { error: "تعذر حفظ اجتماع الحصة. لم يتم استبدال الرابط المحفوظ." });
     }
 
-    if (existing?.provider_meeting_id) {
-      await cancelZoomMeeting(String(existing.provider_meeting_id));
-    }
-
+    // Intentionally do not cancel the previous meeting automatically: it may
+    // already be shared with a paid student. The database now points to the new
+    // teacher-owned meeting, while the old meeting remains available if needed.
     if (!typedBooking.meeting_provider) {
       await admin.from("bookings").update({ meeting_provider: "zoom" }).eq("id", typedBooking.id);
     }
