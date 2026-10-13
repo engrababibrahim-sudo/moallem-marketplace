@@ -82,13 +82,16 @@ export default async function handler(req: any, res: any) {
       .select("id,booking_id,segment_number,provider,provider_meeting_id,join_url,host_url,status,scheduled_start_at,scheduled_end_at")
       .eq("booking_id", bookingId).eq("segment_number", 2).maybeSingle();
     if (existingError) throw existingError;
-    if (existing) return json(res, 200, { created: false, segment: existing });
+    if (existing) return json(res, 409, { error: "يوجد رابط استكمال محفوظ مسبقًا. لن نعيد رابط المضيف القديم تلقائيًا؛ يلزم التحقق من مالك الاجتماع أولًا." });
+
+    const teacherZoomUserId = String(authData.user.email || "").trim().toLowerCase();
+    if (!teacherZoomUserId) return json(res, 400, { error: "لا يوجد بريد إلكتروني لحساب المعلم لاستخدامه مع Zoom." });
 
     const token = await getZoomToken();
     const startAt = new Date(Date.now() + 60_000);
     const endAt = new Date(startAt.getTime() + 40 * 60_000);
     const topic = ("مُعلّم - استكمال الحصة - " + (booking.subject || "حصة تعليمية")).slice(0, 200);
-    const zoomResponse = await fetch("https://api.zoom.us/v2/users/me/meetings", {
+    const zoomResponse = await fetch("https://api.zoom.us/v2/users/" + encodeURIComponent(teacherZoomUserId) + "/meetings", {
       method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: JSON.stringify({
