@@ -14,7 +14,6 @@ type Booking = {
 };
 
 type ZoomMeeting = { id?: number; join_url?: string; start_url?: string };
-type ZoomMeetingDetails = { host_email?: string; host_id?: string };
 type ZoomToken = { access_token?: string };
 
 function json(res: any, status: number, body: unknown) {
