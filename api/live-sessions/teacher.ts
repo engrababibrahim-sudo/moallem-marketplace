@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 type ZoomToken = { access_token?: string };
-type ZoomMeetingDetails = { start_url?: string };
+type ZoomMeetingDetails = { start_url?: string; host_email?: string };
 
 function json(res: any, status: number, body: unknown) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -35,23 +35,27 @@ async function getZoomToken(): Promise<string> {
   return data.access_token;
 }
 
-async function refreshHostUrl(token: string, meetingId: string, savedUrl: string | null) {
+async function refreshHostUrl(token: string, meetingId: string, teacherEmail: string): Promise<string | null> {
   try {
-    // Zoom start_url links are temporary. Fetch the meeting details when the teacher opens
-    // the portal so the page can use the latest host start URL instead of a stale saved URL.
+    // Never return a stored host URL unless Zoom confirms the meeting belongs to this teacher.
     const response = await fetch(
       "https://api.zoom.us/v2/meetings/" + encodeURIComponent(meetingId),
       { headers: { Authorization: "Bearer " + token } }
     );
     const data = (await response.json().catch(() => null)) as ZoomMeetingDetails | null;
     if (!response.ok) {
-      console.error("Zoom host URL refresh failed", response.status, meetingId);
-      return savedUrl;
+      console.error("Zoom meeting ownership verification failed", response.status, meetingId);
+      return null;
     }
-    return data?.start_url || savedUrl;
+    const owner = String(data?.host_email || "").trim().toLowerCase();
+    if (!owner || owner !== teacherEmail || !data?.start_url) {
+      console.warn("Suppressing unverified or mismatched Zoom host URL", meetingId);
+      return null;
+    }
+    return data.start_url;
   } catch (error) {
-    console.error("Zoom host URL refresh request failed", meetingId, error);
-    return savedUrl;
+    console.error("Zoom host URL verification failed", meetingId, error);
+    return null;
   }
 }
 
@@ -92,7 +96,8 @@ export default async function handler(req: any, res: any) {
     if (sessionsError) throw sessionsError;
     if (segmentsError) console.warn("Teacher continuation links unavailable; migration may be pending", segmentsError.message);
 
-    // Get fresh host start URLs when possible. A failed refresh leaves the stored URL as fallback.
+    // Host URLs are sensitive. Only expose a URL when Zoom confirms this teacher is the host.
+    const teacherEmail = String(authData.user.email || "").trim().toLowerCase();
     let zoomToken: string | null = null;
     const needsRefresh = [...(sessions ?? []), ...(segments ?? [])].some((s: any) => s.provider_meeting_id);
     if (needsRefresh && process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID && process.env.ZOOM_CLIENT_SECRET) {
@@ -104,28 +109,17 @@ export default async function handler(req: any, res: any) {
     }
 
     const refreshedSessions = await Promise.all((sessions ?? []).map(async (s: any) => {
-      const hostUrl = zoomToken && s.provider_meeting_id
-        ? await refreshHostUrl(zoomToken, String(s.provider_meeting_id), s.host_url ?? null)
-        : (s.host_url ?? null);
-      if (hostUrl && hostUrl !== s.host_url) {
-        const { error } = await admin.from("live_sessions").update({ host_url: hostUrl }).eq("id", s.id);
-        if (error) console.warn("Unable to persist refreshed Zoom host URL", error.message);
-      }
-      return { ...s, host_url: hostUrl ?? s.host_url ?? null, join_url: s.join_url ?? null };
+      const hostUrl = zoomToken && s.provider_meeting_id && teacherEmail
+        ? await refreshHostUrl(zoomToken, String(s.provider_meeting_id), teacherEmail)
+        : null;
+      return { ...s, host_url: hostUrl, join_url: s.join_url ?? null };
     }));
 
     const refreshedSegments = await Promise.all((segments ?? []).map(async (s: any) => {
-      const hostUrl = zoomToken && s.provider_meeting_id
-        ? await refreshHostUrl(zoomToken, String(s.provider_meeting_id), s.host_url ?? null)
-        : (s.host_url ?? null);
-      if (hostUrl && hostUrl !== s.host_url) {
-        const { error } = await admin.from("live_session_segments")
-          .update({ host_url: hostUrl })
-          .eq("booking_id", s.booking_id)
-          .eq("segment_number", 2);
-        if (error) console.warn("Unable to persist refreshed continuation host URL", error.message);
-      }
-      return { ...s, host_url: hostUrl ?? s.host_url ?? null, join_url: s.join_url ?? null };
+      const hostUrl = zoomToken && s.provider_meeting_id && teacherEmail
+        ? await refreshHostUrl(zoomToken, String(s.provider_meeting_id), teacherEmail)
+        : null;
+      return { ...s, host_url: hostUrl, join_url: s.join_url ?? null };
     }));
 
     const continuationByBooking = Object.fromEntries(refreshedSegments.map((s: any) => [s.booking_id, s]));
