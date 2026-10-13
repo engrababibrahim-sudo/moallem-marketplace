@@ -16,7 +16,6 @@ const menu = [
   ["المستخدمون","/admin/users",Users],
   ["الطلاب","/admin/students",GraduationCap],
   ["أولياء الأمور","/admin/parents",UserRound],
-  ["طلبات أولياء الأمور","/admin/parent-requests",UserRound],
   ["طلبات المعلمين","/admin/teachers",ClipboardCheck],
   ["الحجوزات","/admin/bookings",CalendarDays],
   ["حضور لقاءات Zoom","/admin/attendance",Video],
