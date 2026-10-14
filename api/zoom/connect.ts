@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
-import { env, redirectUri, signState } from "./_oauth";
+import { env, redirectUri, signState } from "./_oauth.js";
 
 function json(res: any, status: number, body: unknown) { return res.status(status).json(body); }
 export default async function handler(req: any, res: any) {
