@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { jwtVerify } from "jose";
+import { verifyState } from "./_oauth";
 import { createCipheriv, randomBytes } from "node:crypto";
 
 type ZoomTokenResponse={access_token?:string;refresh_token?:string;expires_in?:number;scope?:string;error?:string};
@@ -10,12 +10,15 @@ export default async function handler(req:any,res:any){
  if(req.method!=="GET"){res.setHeader("Allow","GET");return html(res,405,"طلب غير مدعوم","أعيدي المحاولة من منصة مُعلّم.");}
  const code=String(req.query?.code||"");const state=String(req.query?.state||"");const oauthError=String(req.query?.error||"");
  if(oauthError)return html(res,400,"لم يتم ربط Zoom","تم إلغاء الموافقة أو رفضها داخل Zoom.");
- const clientId=process.env.ZOOM_OAUTH_CLIENT_ID;const secret=process.env.ZOOM_OAUTH_CLIENT_SECRET;const redirect=process.env.ZOOM_OAUTH_REDIRECT_URI;const stateSecret=process.env.ZOOM_OAUTH_STATE_SECRET;const encryptionKey=process.env.ZOOM_TOKEN_ENCRYPTION_KEY;
+ const clientId=process.env.ZOOM_OAUTH_CLIENT_ID;const secret=process.env.ZOOM_OAUTH_CLIENT_SECRET;const redirect=process.env.ZOOM_OAUTH_REDIRECT_URI;const encryptionKey=process.env.ZOOM_TOKEN_ENCRYPTION_KEY;
  const url=process.env.SUPABASE_URL||process.env.VITE_SUPABASE_URL;const service=process.env.SUPABASE_SERVICE_ROLE_KEY;
- if(!code||!state||!clientId||!secret||!redirect||!stateSecret||!encryptionKey||!url||!service)return html(res,503,"الإعداد غير مكتمل","لم يتم حفظ الاتصال. يلزم استكمال إعدادات OAuth في Vercel.");
+ if(!code||!state||!clientId||!secret||!redirect||!encryptionKey||!url||!service)return html(res,503,"الإعداد غير مكتمل","لم يتم حفظ الاتصال. يلزم استكمال إعدادات OAuth في Vercel.");
  try{
-  const {payload}=await jwtVerify(state,new TextEncoder().encode(stateSecret));
-  const teacherId=String(payload.uid||"");if(!teacherId)throw new Error("Invalid OAuth state");
+  const stateParts=state.split(".");
+  if(stateParts.length!==2 || !verifyState(stateParts[0],stateParts[1])) throw new Error("Invalid OAuth state signature");
+  const statePayload=JSON.parse(Buffer.from(stateParts[0],"base64url").toString("utf8")) as {uid?:string;exp?:number;nonce?:string};
+  const teacherId=String(statePayload.uid||"");
+  if(!teacherId || !Number.isFinite(statePayload.exp) || Number(statePayload.exp)<Date.now() || !statePayload.nonce) throw new Error("Expired or invalid OAuth state");
   const tokenResponse=await fetch("https://zoom.us/oauth/token",{method:"POST",headers:{Authorization:"Basic "+Buffer.from(clientId+":"+secret).toString("base64"),"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:redirect})});
   const token=await tokenResponse.json().catch(()=>null) as ZoomTokenResponse|null;
   if(!tokenResponse.ok||!token?.access_token)throw new Error("Zoom token exchange failed");
@@ -23,7 +26,7 @@ export default async function handler(req:any,res:any){
   const me=await meResponse.json().catch(()=>null) as ZoomUser|null;
   if(!meResponse.ok||!me?.id||!me.email)throw new Error("Could not verify Zoom user");
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
-  const {error}=await admin.from("teacher_zoom_connections").upsert({teacher_id:teacherId,zoom_user_id:me.id,zoom_email:me.email.toLowerCase(),access_token_encrypted:encrypt(token.access_token,encryptionKey),refresh_token_encrypted:token.refresh_token?encrypt(token.refresh_token,encryptionKey):null,token_expires_at:new Date(Date.now()+Math.max(60,Number(token.expires_in||3600))*1000).toISOString(),scopes:String(token.scope||"").split(/[ ,]+/).filter(Boolean),updated_at:new Date().toISOString()},{onConflict:"teacher_id"});
+  const {error}=await admin.from("teacher_zoom_connections").upsert({teacher_id:teacherId,zoom_user_id:me.id,zoom_email:me.email.toLowerCase(),connected_at:new Date().toISOString(),access_token_encrypted:encrypt(token.access_token,encryptionKey),refresh_token_encrypted:token.refresh_token?encrypt(token.refresh_token,encryptionKey):null,token_expires_at:new Date(Date.now()+Math.max(60,Number(token.expires_in||3600))*1000).toISOString(),scopes:String(token.scope||"").split(/[ ,]+/).filter(Boolean),updated_at:new Date().toISOString()},{onConflict:"teacher_id"});
   if(error)throw new Error("Could not save Zoom connection");
   return html(res,200,"تم ربط Zoom بنجاح","تم ربط حساب Zoom ("+me.email.replace(/[<>&"]/g,"")+") بحساب المعلم. يمكنك العودة إلى منصة مُعلّم.");
  }catch(error){console.error("Zoom OAuth callback failed",error);return html(res,400,"تعذر ربط Zoom","لم نتمكن من إكمال الربط. تأكدي من إعدادات التطبيق والصلاحيات ثم حاولي مرة أخرى.");}
