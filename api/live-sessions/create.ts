@@ -111,7 +111,7 @@ async function createZoomMeeting(booking: Booking, token: string) {
       httpStatus: response.status,
       zoomCode,
       zoomMessage,
-      requestedHost: teacherZoomUserId,
+      requestedHost: "me (OAuth-connected account)",
     });
     throw new Error(
       "ZOOM_CREATE_FAILED:" +
