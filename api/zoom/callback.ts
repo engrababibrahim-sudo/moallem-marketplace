@@ -4,6 +4,7 @@ import { createCipheriv, randomBytes } from "node:crypto";
 
 type ZoomTokenResponse={access_token?:string;refresh_token?:string;expires_in?:number;scope?:string;error?:string};
 type ZoomUser={id?:string;email?:string};
+type ZoomApiError={code?:number|string;message?:string};
 function html(res:any,status:number,title:string,message:string){res.setHeader("Content-Type","text/html; charset=utf-8");res.setHeader("Cache-Control","no-store");return res.status(status).send("<!doctype html><html lang='ar' dir='rtl'><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>"+title+"</title><main style='font-family:Arial;max-width:620px;margin:48px auto;padding:24px'><h2>"+title+"</h2><p>"+message+"</p><a href='https://moallem-marketplace-nine.vercel.app/'>العودة إلى منصة مُعلّم</a></main></html>");}
 function encrypt(value:string,keyText:string){const key=Buffer.from(keyText,"base64");if(key.length!==32)throw new Error("ZOOM_TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key");const iv=randomBytes(12);const cipher=createCipheriv("aes-256-gcm",key,iv);const body=Buffer.concat([cipher.update(value,"utf8"),cipher.final()]);return [iv.toString("base64url"),cipher.getAuthTag().toString("base64url"),body.toString("base64url")].join(".");}
 export default async function handler(req:any,res:any){
@@ -28,8 +29,12 @@ export default async function handler(req:any,res:any){
   const token=await tokenResponse.json().catch(()=>null) as ZoomTokenResponse|null;
   if(!tokenResponse.ok||!token?.access_token)throw new Error("Zoom token exchange failed (HTTP "+tokenResponse.status+", "+String(token?.error||"no_access_token")+").");
   const meResponse=await fetch("https://api.zoom.us/v2/users/me",{headers:{Authorization:"Bearer "+token.access_token}});
-  const me=await meResponse.json().catch(()=>null) as ZoomUser|null;
-  if(!meResponse.ok||!me?.id||!me.email)throw new Error("Zoom user verification failed (HTTP "+meResponse.status+").");
+  const me=await meResponse.json().catch(()=>null) as (ZoomUser & ZoomApiError)|null;
+  if(!meResponse.ok||!me?.id||!me.email){
+   const zoomCode=me?.code===undefined?"unknown":String(me.code);
+   const zoomMessage=String(me?.message||"No error message returned").replace(/[<>&"]/g,"").slice(0,180);
+   throw new Error("Zoom user verification failed (HTTP "+meResponse.status+", code "+zoomCode+"): "+zoomMessage);
+  }
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   const {error}=await admin.from("teacher_zoom_connections").upsert({teacher_id:teacherId,zoom_user_id:me.id,zoom_email:me.email.toLowerCase(),connected_at:new Date().toISOString(),access_token_encrypted:encrypt(token.access_token,encryptionKey),refresh_token_encrypted:token.refresh_token?encrypt(token.refresh_token,encryptionKey):null,token_expires_at:new Date(Date.now()+Math.max(60,Number(token.expires_in||3600))*1000).toISOString(),scopes:String(token.scope||"").split(/[ ,]+/).filter(Boolean),updated_at:new Date().toISOString()},{onConflict:"teacher_id"});
   if(error)throw new Error("Supabase save failed: "+String(error.message||"unknown database error"));
