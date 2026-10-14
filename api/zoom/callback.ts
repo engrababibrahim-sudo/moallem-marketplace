@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { verifyState } from "./_oauth";
+import { verifyState } from "./_oauth.js";
 import { createCipheriv, randomBytes } from "node:crypto";
 
 type ZoomTokenResponse={access_token?:string;refresh_token?:string;expires_in?:number;scope?:string;error?:string};
