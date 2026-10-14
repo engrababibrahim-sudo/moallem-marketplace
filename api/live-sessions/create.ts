@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { decrypt, encrypt } from "../zoom/_oauth";
+import { decrypt, encrypt } from "../zoom/_oauth.js";
 
 type Booking = {
   id: string;
