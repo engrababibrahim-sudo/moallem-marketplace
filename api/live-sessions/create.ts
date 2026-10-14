@@ -37,7 +37,16 @@ async function getTeacherZoomConnection(admin: any, teacherId: string): Promise<
     .select("teacher_id,zoom_user_id,zoom_email,access_token_encrypted,refresh_token_encrypted,token_expires_at")
     .eq("teacher_id", teacherId)
     .maybeSingle();
-  if (error) throw new Error("ZOOM_CONNECTION_LOOKUP_FAILED");
+  if (error) {
+    // Log only Supabase's diagnostic fields, never tokens or connection secrets.
+    console.error("Teacher Zoom connection lookup failed", {
+      code: error.code || null,
+      message: String(error.message || "").slice(0, 300),
+      details: String(error.details || "").slice(0, 300),
+      hint: String(error.hint || "").slice(0, 200),
+    });
+    throw new Error("ZOOM_CONNECTION_LOOKUP_FAILED");
+  }
   if (!connection?.access_token_encrypted || !connection?.refresh_token_encrypted || !connection?.zoom_user_id || !connection?.zoom_email) {
     throw new Error("ZOOM_TEACHER_NOT_CONNECTED");
   }
