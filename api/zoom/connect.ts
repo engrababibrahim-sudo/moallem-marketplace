@@ -23,7 +23,7 @@ export default async function handler(req: any, res: any) {
       redirect_uri: redirectUri(),
       state,
     });
-    return res.status(302).setHeader("Location", "https://zoom.us/oauth/authorize?" + query.toString()).end();
+    return json(res, 200, { url: "https://zoom.us/oauth/authorize?" + query.toString() });
   } catch (e) {
     console.error("Zoom connect initialization failed", e);
     return json(res, 503, { error: "إعدادات ربط Zoom غير مكتملة على الخادم." });
