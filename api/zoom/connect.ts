@@ -33,10 +33,9 @@ export default async function handler(req: any, res: any) {
     ].filter(([, present]) => !present).map(([name]) => name);
     const diagnostic = e instanceof Error ? e.message : String(e);
     console.error("Zoom connect initialization failed", { missing, diagnostic });
-    return json(res, 503, {
-      error: "إعدادات ربط Zoom غير مكتملة على الخادم.",
-      missing,
-      detail: missing.length ? undefined : "المتغيرات موجودة لكن فشل التحقق منها؛ راجع سجل Vercel للخطأ التفصيلي.",
-    });
+    const errorMessage = missing.length
+      ? "إعدادات Zoom: متغيرات غير مقروءة من الخادم: " + missing.join(", ")
+      : "إعدادات Zoom موجودة، لكن فشل التحقق من المفتاح أو الإعدادات. راجعي سجل Vercel للخطأ Zoom connect initialization failed.";
+    return json(res, 503, { error: errorMessage, missing });
   }
 }
