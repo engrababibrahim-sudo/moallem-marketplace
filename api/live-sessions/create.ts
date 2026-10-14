@@ -75,13 +75,13 @@ async function getTeacherZoomConnection(admin: any, teacherId: string): Promise<
   return { token, zoomUserId: String(connection.zoom_user_id), zoomEmail: String(connection.zoom_email).trim().toLowerCase() };
 }
 
-async function createZoomMeeting(booking: Booking, teacherZoomUserId: string, token: string) {
+async function createZoomMeeting(booking: Booking, token: string) {
   const start = new Date(booking.start_at);
   const end = new Date(booking.end_at);
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
     throw new Error("Invalid booking date or duration.");
   }
-  const response = await fetch("https://api.zoom.us/v2/users/" + encodeURIComponent(teacherZoomUserId) + "/meetings", {
+  const response = await fetch("https://api.zoom.us/v2/users/me/meetings", {
     method: "POST",
     headers: {
       Authorization: "Bearer " + token,
@@ -273,7 +273,7 @@ export default async function handler(req: any, res: any) {
     // a replacement owned by the assigned teacher and only then update the DB.
     let meeting;
     try {
-      meeting = await createZoomMeeting(typedBooking, teacherZoomUserId, zoomConnection.token);
+      meeting = await createZoomMeeting(typedBooking, zoomConnection.token);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "";
       console.error("Zoom meeting creation failed", detail);
