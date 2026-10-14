@@ -14,7 +14,7 @@ export default async function handler(req: any, res: any) {
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!service) return json(res, 503, { error: "الخدمة غير مهيأة." });
   const admin = createClient(url, service, { auth: { persistSession: false } });
-  const { data: connection, error: dbError } = await admin.from("teacher_zoom_connections").select("zoom_email,connected_at,expires_at").eq("teacher_id", data.user.id).maybeSingle();
+  const { data: connection, error: dbError } = await admin.from("teacher_zoom_connections").select("zoom_email,connected_at,token_expires_at").eq("teacher_id", data.user.id).maybeSingle();
   if (dbError) return json(res, 503, { connected: false, error: "شغّلي ترحيل قاعدة البيانات أولًا." });
   return json(res, 200, { connected: !!connection, zoom_email: connection?.zoom_email || null, connected_at: connection?.connected_at || null });
 }
