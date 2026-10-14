@@ -12,7 +12,12 @@ export default async function handler(req:any,res:any){
  if(oauthError)return html(res,400,"لم يتم ربط Zoom","تم إلغاء الموافقة أو رفضها داخل Zoom.");
  const clientId=process.env.ZOOM_OAUTH_CLIENT_ID;const secret=process.env.ZOOM_OAUTH_CLIENT_SECRET;const redirect=process.env.ZOOM_OAUTH_REDIRECT_URI;const encryptionKey=process.env.ZOOM_TOKEN_ENCRYPTION_KEY;
  const url=process.env.SUPABASE_URL||process.env.VITE_SUPABASE_URL;const service=process.env.SUPABASE_SERVICE_ROLE_KEY;
- if(!code||!state||!clientId||!secret||!redirect||!encryptionKey||!url||!service)return html(res,503,"الإعداد غير مكتمل","لم يتم حفظ الاتصال. يلزم استكمال إعدادات OAuth في Vercel.");
+ const missingEnv=[["ZOOM_OAUTH_CLIENT_ID",clientId],["ZOOM_OAUTH_CLIENT_SECRET",secret],["ZOOM_OAUTH_REDIRECT_URI",redirect],["ZOOM_TOKEN_ENCRYPTION_KEY",encryptionKey],["SUPABASE_URL or VITE_SUPABASE_URL",url],["SUPABASE_SERVICE_ROLE_KEY",service]].filter(([,value])=>!value).map(([name])=>name);
+ if(!code||!state||missingEnv.length){
+  console.error("Zoom OAuth callback missing inputs",{missingEnv,hasCode:Boolean(code),hasState:Boolean(state),hasOAuthError:Boolean(oauthError)});
+  const issues=[...missingEnv,...(!code?["Zoom authorization code was not received"]:[]),...(!state?["OAuth state was not received"]:[])];
+  return html(res,503,"تعذر إكمال ربط Zoom","السبب المحدد: "+issues.join("، ")+". لم يتم عرض أي مفاتيح سرية. راجعي إعدادات التطبيق ثم أعيدي المحاولة.");
+ }
  try{
   const stateParts=state.split(".");
   if(stateParts.length!==2 || !verifyState(stateParts[0],stateParts[1])) throw new Error("Invalid OAuth state signature");
