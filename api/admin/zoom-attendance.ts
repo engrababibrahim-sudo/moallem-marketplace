@@ -82,14 +82,35 @@ export default async function handler(req: any, res: any) {
         s.provider_meeting_id,
         ...bookingSegments.map((segment: any) => segment.provider_meeting_id),
       ].filter(Boolean).map(String));
-      const lessonEvents = (events || []).filter((event: any) =>
-        event.booking_id === s.booking_id &&
-        (lessonMeetingIds.size === 0 || lessonMeetingIds.has(String(event.provider_meeting_id || "")))
-      );
       const times = [
-        { start: s.scheduled_start_at, end: s.scheduled_end_at },
-        ...bookingSegments.map((segment: any) => ({ start: segment.scheduled_start_at, end: segment.scheduled_end_at })),
+        { meetingId: s.provider_meeting_id, start: s.scheduled_start_at, end: s.scheduled_end_at },
+        ...bookingSegments.map((segment: any) => ({
+          meetingId: segment.provider_meeting_id,
+          start: segment.scheduled_start_at,
+          end: segment.scheduled_end_at,
+        })),
       ].filter((period: any) => period.start && period.end);
+      // Match each event to the schedule of its exact Zoom meeting, not merely
+      // any time window belonging to the booking. Keep out-of-window events visible
+      // for audit, but never use them as proof of attendance.
+      const lessonEvents = (events || [])
+        .filter((event: any) =>
+          event.booking_id === s.booking_id &&
+          lessonMeetingIds.has(String(event.provider_meeting_id || ""))
+        )
+        .map((event: any) => {
+          const period = times.find((item: any) =>
+            String(item.meetingId || "") === String(event.provider_meeting_id || "")
+          );
+          const eventAt = new Date(event.event_time).getTime();
+          const startAt = period ? new Date(period.start).getTime() : NaN;
+          const endAt = period ? new Date(period.end).getTime() : NaN;
+          const toleranceMs = 30 * 60 * 1000;
+          const outside_schedule = !period || !Number.isFinite(eventAt) ||
+            !Number.isFinite(startAt) || !Number.isFinite(endAt) ||
+            eventAt < startAt - toleranceMs || eventAt > endAt + toleranceMs;
+          return { ...event, outside_schedule };
+        });
       return {
         booking_id: s.booking_id,
         meeting_id: s.provider_meeting_id,
@@ -104,7 +125,7 @@ export default async function handler(req: any, res: any) {
         events: lessonEvents,
         meeting_count: lessonMeetingIds.size,
         continuation_count: bookingSegments.length,
-        meeting_periods: times,
+        meeting_periods: times.map(({ start, end }: any) => ({ start, end })),
       };
     }).sort((a: any, b: any) =>
       new Date(b.scheduled_start_at).getTime() - new Date(a.scheduled_start_at).getTime()
