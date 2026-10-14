@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { decrypt, encrypt } from "../zoom/_oauth";
 
 type Booking = {
   id: string;
@@ -31,35 +32,51 @@ function getAdminClient() {
   });
 }
 
-async function getZoomToken(): Promise<string> {
-  const accountId = process.env.ZOOM_ACCOUNT_ID;
-  const clientId = process.env.ZOOM_CLIENT_ID;
-  const clientSecret = process.env.ZOOM_CLIENT_SECRET;
-  if (!accountId || !clientId || !clientSecret) {
-    throw new Error("Zoom credentials are not configured.");
+async function getTeacherZoomConnection(admin: any, teacherId: string): Promise<{ token: string; zoomUserId: string; zoomEmail: string }> {
+  const { data: connection, error } = await admin
+    .from("teacher_zoom_connections")
+    .select("teacher_id,zoom_user_id,zoom_email,access_token_encrypted,refresh_token_encrypted,token_expires_at")
+    .eq("teacher_id", teacherId)
+    .maybeSingle();
+  if (error) throw new Error("ZOOM_CONNECTION_LOOKUP_FAILED");
+  if (!connection?.access_token_encrypted || !connection?.refresh_token_encrypted || !connection?.zoom_user_id || !connection?.zoom_email) {
+    throw new Error("ZOOM_TEACHER_NOT_CONNECTED");
   }
-  const basic = Buffer.from(clientId + ":" + clientSecret).toString("base64");
-  const response = await fetch(
-    "https://zoom.us/oauth/token?grant_type=account_credentials&account_id=" +
-      encodeURIComponent(accountId),
-    {
+  let token = decrypt(String(connection.access_token_encrypted));
+  const expiresAt = Date.parse(String(connection.token_expires_at || ""));
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() + 120_000) {
+    const clientId = process.env.ZOOM_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.ZOOM_OAUTH_CLIENT_SECRET;
+    if (!clientId || !clientSecret) throw new Error("ZOOM_OAUTH_NOT_CONFIGURED");
+    const response = await fetch("https://zoom.us/oauth/token", {
       method: "POST",
       headers: {
-        Authorization: "Basic " + basic,
+        Authorization: "Basic " + Buffer.from(clientId + ":" + clientSecret).toString("base64"),
         "Content-Type": "application/x-www-form-urlencoded",
       },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: decrypt(String(connection.refresh_token_encrypted)),
+      }),
+    });
+    const refreshed = await response.json().catch(() => null) as { access_token?: string; refresh_token?: string; expires_in?: number } | null;
+    if (!response.ok || !refreshed?.access_token || !refreshed?.refresh_token) {
+      console.error("Zoom token refresh failed", response.status);
+      throw new Error("ZOOM_RECONNECT_REQUIRED");
     }
-  );
-  const data = (await response.json().catch(() => null)) as ZoomToken | null;
-  if (!response.ok || !data?.access_token) {
-    console.error("Zoom OAuth error", response.status);
-    throw new Error("Unable to authenticate with Zoom.");
+    token = refreshed.access_token;
+    const { error: saveError } = await admin.from("teacher_zoom_connections").update({
+      access_token_encrypted: encrypt(refreshed.access_token),
+      refresh_token_encrypted: encrypt(refreshed.refresh_token),
+      token_expires_at: new Date(Date.now() + Math.max(60, Number(refreshed.expires_in || 3600)) * 1000).toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("teacher_id", teacherId);
+    if (saveError) throw new Error("ZOOM_TOKEN_SAVE_FAILED");
   }
-  return data.access_token;
+  return { token, zoomUserId: String(connection.zoom_user_id), zoomEmail: String(connection.zoom_email).trim().toLowerCase() };
 }
 
-async function createZoomMeeting(booking: Booking, teacherZoomUserId: string) {
-  const token = await getZoomToken();
+async function createZoomMeeting(booking: Booking, teacherZoomUserId: string, token: string) {
   const start = new Date(booking.start_at);
   const end = new Date(booking.end_at);
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
@@ -110,9 +127,8 @@ async function createZoomMeeting(booking: Booking, teacherZoomUserId: string) {
   };
 }
 
-async function existingMeetingBelongsToTeacher(id: string, teacherEmail: string): Promise<boolean> {
+async function existingMeetingBelongsToTeacher(id: string, teacherEmail: string, token: string): Promise<boolean> {
   try {
-    const token = await getZoomToken();
     const response = await fetch(
       "https://api.zoom.us/v2/meetings/" + encodeURIComponent(id),
       { headers: { Authorization: "Bearer " + token } }
@@ -126,9 +142,8 @@ async function existingMeetingBelongsToTeacher(id: string, teacherEmail: string)
   }
 }
 
-async function cancelZoomMeeting(id: string) {
+async function cancelZoomMeeting(id: string, token: string) {
   try {
-    const token = await getZoomToken();
     const response = await fetch(
       "https://api.zoom.us/v2/meetings/" + encodeURIComponent(id),
       { method: "DELETE", headers: { Authorization: "Bearer " + token } }
@@ -179,14 +194,6 @@ export default async function handler(req: any, res: any) {
     if (requestedProvider !== "zoom") {
       return json(res, 503, { error: "Google Meet غير مهيأ بعد." });
     }
-    if (
-      !process.env.ZOOM_ACCOUNT_ID ||
-      !process.env.ZOOM_CLIENT_ID ||
-      !process.env.ZOOM_CLIENT_SECRET
-    ) {
-      return json(res, 503, { error: "Zoom غير مهيأ بعد. راجعي إعدادات البيئة في Vercel." });
-    }
-
     const { data: booking, error: bookingError } = await userClient
       .from("bookings")
       .select("id,student_id,teacher_id,subject,start_at,end_at,timezone,status,payment_status,meeting_provider")
@@ -227,10 +234,22 @@ export default async function handler(req: any, res: any) {
       console.error("Live session lookup error", existingError);
       return json(res, 500, { error: "تعذر التحقق من اجتماع الحصة." });
     }
-    const teacherZoomUserId = String(authData.user.email || "").trim().toLowerCase();
-    if (!teacherZoomUserId) {
-      return json(res, 400, { error: "لا يوجد بريد إلكتروني بحساب المعلم لاستخدامه مع Zoom." });
+    let zoomConnection: { token: string; zoomUserId: string; zoomEmail: string };
+    try {
+      zoomConnection = await getTeacherZoomConnection(admin, typedBooking.teacher_id);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "";
+      if (reason === "ZOOM_TEACHER_NOT_CONNECTED") {
+        return json(res, 409, { error: "يجب على المعلم ربط حساب Zoom الخاص به أولًا من إعدادات حساب المعلم." });
+      }
+      if (reason === "ZOOM_RECONNECT_REQUIRED") {
+        return json(res, 409, { error: "انتهت صلاحية اتصال Zoom. يرجى فصل الربط ثم ربط الحساب مرة أخرى." });
+      }
+      console.error("Teacher Zoom connection error", reason);
+      return json(res, 503, { error: "تعذر تجهيز اتصال Zoom للمعلم. راجعي إعدادات OAuth وسجلات الخادم." });
     }
+    const teacherZoomUserId = zoomConnection.zoomUserId;
+    const teacherZoomEmail = zoomConnection.zoomEmail;
 
     // Reuse a saved meeting when Zoom confirms that it is still owned by this
     // teacher. This prevents duplicate meetings and keeps the student's link stable.
@@ -239,7 +258,7 @@ export default async function handler(req: any, res: any) {
       existing.provider_meeting_id &&
       existing.join_url &&
       existing.host_url &&
-      await existingMeetingBelongsToTeacher(String(existing.provider_meeting_id), teacherZoomUserId)
+      await existingMeetingBelongsToTeacher(String(existing.provider_meeting_id), teacherZoomEmail, zoomConnection.token)
     ) {
       return json(res, 200, {
         created: false,
@@ -255,7 +274,7 @@ export default async function handler(req: any, res: any) {
     // a replacement owned by the assigned teacher and only then update the DB.
     let meeting;
     try {
-      meeting = await createZoomMeeting(typedBooking, teacherZoomUserId);
+      meeting = await createZoomMeeting(typedBooking, teacherZoomUserId, zoomConnection.token);
     } catch (error) {
       const detail = error instanceof Error ? error.message : "";
       console.error("Zoom meeting creation failed", detail);
@@ -321,7 +340,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (sessionError || !session) {
-      await cancelZoomMeeting(meeting.providerMeetingId);
+      await cancelZoomMeeting(meeting.providerMeetingId, zoomConnection.token);
       console.error("Live session database error", sessionError);
       return json(res, 500, { error: "تعذر حفظ اجتماع الحصة. لم يتم استبدال الرابط المحفوظ." });
     }
