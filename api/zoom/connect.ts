@@ -22,6 +22,8 @@ export default async function handler(req: any, res: any) {
       client_id: env("ZOOM_OAUTH_CLIENT_ID"),
       redirect_uri: redirectUri(),
       state,
+      include_granted_scopes: "true",
+      scope: "user:read:user",
     });
     return json(res, 200, { url: "https://zoom.us/oauth/authorize?" + query.toString() });
   } catch (e) {
