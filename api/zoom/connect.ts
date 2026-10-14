@@ -25,7 +25,18 @@ export default async function handler(req: any, res: any) {
     });
     return json(res, 200, { url: "https://zoom.us/oauth/authorize?" + query.toString() });
   } catch (e) {
-    console.error("Zoom connect initialization failed", e);
-    return json(res, 503, { error: "إعدادات ربط Zoom غير مكتملة على الخادم." });
+    const missing = [
+      ["SUPABASE_URL", Boolean(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)],
+      ["SUPABASE_PUBLISHABLE_KEY or VITE_SUPABASE_PUBLISHABLE_KEY", Boolean(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY)],
+      ["ZOOM_OAUTH_CLIENT_ID", Boolean(process.env.ZOOM_OAUTH_CLIENT_ID)],
+      ["ZOOM_TOKEN_ENCRYPTION_KEY", Boolean(process.env.ZOOM_TOKEN_ENCRYPTION_KEY)],
+    ].filter(([, present]) => !present).map(([name]) => name);
+    const diagnostic = e instanceof Error ? e.message : String(e);
+    console.error("Zoom connect initialization failed", { missing, diagnostic });
+    return json(res, 503, {
+      error: "إعدادات ربط Zoom غير مكتملة على الخادم.",
+      missing,
+      detail: missing.length ? undefined : "المتغيرات موجودة لكن فشل التحقق منها؛ راجع سجل Vercel للخطأ التفصيلي.",
+    });
   }
 }
