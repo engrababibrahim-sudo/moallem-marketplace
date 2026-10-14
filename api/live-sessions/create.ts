@@ -253,8 +253,21 @@ export default async function handler(req: any, res: any) {
       if (reason === "ZOOM_RECONNECT_REQUIRED") {
         return json(res, 409, { error: "انتهت صلاحية اتصال Zoom. يرجى فصل الربط ثم ربط الحساب مرة أخرى." });
       }
+      if (reason === "ZOOM_CONNECTION_LOOKUP_FAILED") {
+        return json(res, 503, { error: "تعذر قراءة سجل ربط Zoom من قاعدة البيانات. تحققي أن جدول teacher_zoom_connections موجود في نفس مشروع Supabase المستخدم في إعدادات Vercel." });
+      }
+      if (reason === "ZOOM_OAUTH_NOT_CONFIGURED") {
+        return json(res, 503, { error: "إعدادات Zoom OAuth غير مكتملة في Vercel؛ يلزم مراجعة مفاتيح OAuth." });
+      }
+      if (reason === "ZOOM_TOKEN_SAVE_FAILED") {
+        return json(res, 503, { error: "تعذر تحديث رمز اتصال Zoom في قاعدة البيانات. راجعي إعدادات Supabase وصلاحيات الخادم." });
+      }
+      if (/Invalid token|authenticate data|Unsupported state|ZOOM_TOKEN_ENCRYPTION_KEY/.test(reason)) {
+        console.error("Teacher Zoom token decryption/configuration failure", reason);
+        return json(res, 503, { error: "تعذر فك تشفير اتصال Zoom. افصلي ربط Zoom ثم أعيدي ربطه بعد التأكد من ثبات ZOOM_TOKEN_ENCRYPTION_KEY في Vercel." });
+      }
       console.error("Teacher Zoom connection error", reason);
-      return json(res, 503, { error: "تعذر تجهيز اتصال Zoom للمعلم. راجعي إعدادات OAuth وسجلات الخادم." });
+      return json(res, 503, { error: "تعذر تجهيز اتصال Zoom للمعلم. السبب التقني: " + reason.slice(0, 120) });
     }
     const teacherZoomUserId = zoomConnection.zoomUserId;
     const teacherZoomEmail = zoomConnection.zoomEmail;
