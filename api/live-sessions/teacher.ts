@@ -97,7 +97,15 @@ export default async function handler(req: any, res: any) {
     if (segmentsError) console.warn("Teacher continuation links unavailable; migration may be pending", segmentsError.message);
 
     // Host URLs are sensitive. Only expose a URL when Zoom confirms this teacher is the host.
-    const teacherEmail = String(authData.user.email || "").trim().toLowerCase();
+    const { data: zoomConnection, error: zoomConnectionError } = await admin
+      .from("teacher_zoom_connections")
+      .select("zoom_email")
+      .eq("teacher_id", authData.user.id)
+      .maybeSingle();
+    if (zoomConnectionError) throw zoomConnectionError;
+    // The Zoom host email may differ from the Moallem login email.
+    // Verify host links against the Zoom account explicitly connected by this teacher.
+    const teacherEmail = String(zoomConnection?.zoom_email || "").trim().toLowerCase();
     let zoomToken: string | null = null;
     const needsRefresh = [...(sessions ?? []), ...(segments ?? [])].some((s: any) => s.provider_meeting_id);
     if (needsRefresh && process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID && process.env.ZOOM_CLIENT_SECRET) {
