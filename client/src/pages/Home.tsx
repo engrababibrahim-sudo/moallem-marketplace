@@ -239,11 +239,11 @@ export default function Home() {
           <div className="grid items-center gap-10 lg:grid-cols-[1fr_.92fr] lg:gap-14">
             <div className="relative z-10">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#ff7a00]/20 bg-white/80 px-4 py-2 text-xs font-bold text-[#b85400]">
-                <Sparkles className="h-4 w-4" /> تعلّم فردي مع معلمين موثّقين
+                <Sparkles className="h-4 w-4" /> مدرسين خصوصيين
               </div>
               <h1 className="max-w-2xl text-[43px] font-bold leading-[1.2] tracking-[-.04em] sm:text-6xl lg:text-[68px]">
-                تعلم مع أفضل<br />
-                <span className="relative inline-block text-[#f27600]">المعلمين من أي مكان<span className="absolute -bottom-1 right-0 h-2 w-2/3 rounded-full bg-[#ffd7b5]/80" /></span>
+                رحلتك نحو<br />
+                <span className="relative inline-block text-[#f27600]">التفوق تبدأ من هنا!<span className="absolute -bottom-1 right-0 h-2 w-2/3 rounded-full bg-[#ffd7b5]/80" /></span>
               </h1>
               <p className="mt-6 max-w-xl text-base leading-8 text-[#182431]/65 sm:text-lg">
                 مع مُعلّم، اختَر المدرس المناسب، وتعلّم بالطريقة التي تناسبك، وحقّق أهدافك خطوة بخطوة.
@@ -283,7 +283,7 @@ export default function Home() {
               <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-[#eee4d8] shadow-[0_25px_70px_-30px_rgba(24,36,49,.35)] sm:aspect-[1.08/1]">
                 <img src="/manus-storage/moallem-tutor-hero_c772e0b2.jpg" alt="معلمة تشرح لطالبة خلال جلسة تعلم منزلية" className="absolute inset-0 h-full w-full object-cover object-center" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#182431]/70 via-transparent to-transparent" />
-                <div className="absolute right-5 top-5 rounded-full border border-white/30 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-[#182431]">مصر · حصص أونلاين</div>
+                <div className="absolute right-5 top-5 rounded-full border border-white/30 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-[#182431]">حصص فردية أونلاين</div>
                 <div className="absolute bottom-5 right-5 left-5 flex items-end justify-between gap-3 text-white">
                   <div><span className="text-xs text-white/75">تعلم خطوة بخطوة</span><h2 className="mt-1 text-xl font-bold sm:text-2xl">كل حصة تقرّبك لهدفك</h2></div>
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#ff7a00] shadow-lg"><BookOpen className="h-5 w-5" /></span>
