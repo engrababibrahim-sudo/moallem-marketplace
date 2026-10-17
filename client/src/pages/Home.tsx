@@ -112,6 +112,8 @@ export default function Home() {
   const [step, setStep] = useState(0);
   const [, setLocation] = useLocation();
 
+  const teacherSearchHref = "/teachers";
+
   const notify = (text: string) => {
     setNotice(text);
     window.setTimeout(() => setNotice(""), 2800);
@@ -139,7 +141,6 @@ export default function Home() {
     ["متى يناسبك التعلم؟", "time", ["بعد الظهر", "المساء", "نهاية الأسبوع"]],
   ] as const;
   const current = questions[step];
-  const completed = Math.round((getOnboardingProgress(onboarding, 9) / 100) * 9);
 
   const findTeachers = () => {
     const params = new URLSearchParams();
@@ -313,55 +314,160 @@ export default function Home() {
         </section>
 
         <section id="faq" className="border-y border-[#182431]/[0.06] bg-white py-20">
-          <div className="mx-auto max-w-3xl px-5"><div className="text-center"><p className="mb-3 text-sm font-bold text-[#c35a00]">الأسئلة الشائعة</p><h2 className="text-3xl font-bold sm:text-4xl">كل ما تحتاج معرفته</h2></div><div className="mt-9 space-y-3">{faqs.map((question, index) => <div key={question} className="rounded-2xl bg-[#fbf8f4] px-5"><button className="flex w-full items-center justify-between gap-4 py-5 text-right font-bold" onClick={() => setFaq(faq === index ? null : index)}>{question}<ChevronDown className={`h-5 w-5 shrink-0 transition-transform ${faq === index ? "rotate-180" : ""}`} /></button>{faq === index && <p className="pb-5 text-sm leading-7 text-[#182431]/60">{["ابدأ بتحديد المادة والمرحلة، ثم راجع خبرة المعلم وطريقة تدريسه والتوفر والسعر قبل إرسال طلب الحجز.", "يمكنك استخدام حساب ولي الأمر لمتابعة ملفات الأبناء وطلبات الحجز المرتبطة بالحساب، وفق الصلاحيات المتاحة.", "اختر المعلم والموعد المتاح، ثم أرسل طلب الحجز وتابع حالته من مساحة حسابك.", "يعرض ملف المعلم السعر ومدة الحصة المتاحة. راجع التفاصيل قبل تأكيد طلبك."][index]}</p>}</div>)}</div></div>
+          <div className="mx-auto max-w-3xl px-5">
+            <div className="text-center">
+              <p className="mb-3 text-sm font-bold text-[#c35a00]">الأسئلة الشائعة</p>
+              <h2 className="text-3xl font-bold sm:text-4xl">كل ما تحتاج معرفته</h2>
+            </div>
+            <div className="mt-9 space-y-3">
+              {faqs.map((question, index) => (
+                <div key={question} className="rounded-2xl bg-[#fbf8f4] px-5">
+                  <button className="flex w-full items-center justify-between gap-4 py-5 text-right font-bold" onClick={() => setFaq(faq === index ? null : index)}>
+                    {question}
+                    <ChevronDown className={`h-5 w-5 shrink-0 transition-transform ${faq === index ? "rotate-180" : ""}`} />
+                  </button>
+                  {faq === index && (
+                    <p className="pb-5 text-sm leading-7 text-[#182431]/60">
+                      {[
+                        "ابدأ بتحديد المادة والمرحلة، ثم راجع خبرة المعلم وطريقة تدريسه والتوفر والسعر قبل إرسال طلب الحجز.",
+                        "يمكنك استخدام حساب ولي الأمر لمتابعة ملفات الأبناء وطلبات الحجز المرتبطة بالحساب، وفق الصلاحيات المتاحة.",
+                        "اختر المعلم والموعد المتاح، ثم أرسل طلب الحجز وتابع حالته من مساحة حسابك.",
+                        "يعرض ملف المعلم السعر ومدة الحصة المتاحة. راجع التفاصيل قبل تأكيد طلبك."
+                      ][index]}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
       </main>
 
-      <footer className="bg-[#182431] px-5 py-12 text-white lg:px-10"><div className="mx-auto grid max-w-7xl gap-9 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]"><div><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#ff7a00]"><GraduationCap className="h-5 w-5" /></span><b className="text-lg">مُعلّم</b></div><p className="mt-4 max-w-xs text-sm leading-7 text-white/55">اختر معلمك، احجز موعدك، وابدأ رحلة تعلم مصممة لك.</p><p className="mt-4 text-[10px] text-white/35">منصة مُعلّم التعليمية · مصر · © ٢٠٢٦</p></div><FooterGroup title="اكتشف" links={[["المعلمون", "/teachers"], ["كيف تعمل", "#how"], ["الأسئلة الشائعة", "#faq"]]} /><FooterGroup title="مجتمع مُعلّم" links={[["للطلاب", "#parents"], ["لأولياء الأمور", "#parents"], ["للمعلمين", "/teacher/register"]]} /><div><b className="text-sm">تواصل معنا</b><p className="mt-4 flex items-center gap-2 text-sm text-white/55"><MessageCircle className="h-4 w-4" /> لخدمة العملاء والاستفسارات</p><div className="mt-3 flex flex-wrap gap-4 text-xs text-white/40"><Link href="/auth">حسابك</Link><Link href={teacherSearchHref}>المعلمون</Link></div></div></div></footer>
+      <footer className="bg-[#182431] px-5 py-12 text-white lg:px-10">
+        <div className="mx-auto grid max-w-7xl gap-9 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#ff7a00]"><GraduationCap className="h-5 w-5" /></span>
+              <b className="text-lg">مُعلّم</b>
+            </div>
+            <p className="mt-4 max-w-xs text-sm leading-7 text-white/55">اختر معلمك، احجز موعدك، وابدأ رحلة تعلم مصممة لك.</p>
+            <p className="mt-4 text-[10px] text-white/35">منصة مُعلّم التعليمية · مصر · © ٢٠٢٦</p>
+          </div>
+          <FooterGroup title="اكتشف" links={[["المعلمون", "/teachers"], ["كيف تعمل", "#how"], ["الأسئلة الشائعة", "#faq"]]} />
+          <FooterGroup title="مجتمع مُعلّم" links={[["للطلاب", "#parents"], ["لأولياء الأمور", "#parents"], ["للمعلمين", "/teacher/register"]]} />
+          <div>
+            <b className="text-sm">تواصل معنا</b>
+            <p className="mt-4 flex items-center gap-2 text-sm text-white/55"><MessageCircle className="h-4 w-4" /> لخدمة العملاء والاستفسارات</p>
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-white/40">
+              <Link href="/auth">حسابك</Link>
+              <Link href={teacherSearchHref}>المعلمون</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
 
-      {onboardingOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-[#182431]/60 p-4 backdrop-blur-sm"><div role="dialog" aria-modal="true" aria-labelledby="onboarding-title" className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-[1.75rem] bg-[#fbf8f4] p-6 shadow-2xl sm:p-8"><div className="flex items-start justify-between"><div><span className="text-xs font-bold text-[#c35a00]">خطوة {Math.min(step + 1, 9)} من ٩ · ملف تعلّم مبدئي</span><h2 id="onboarding-title" className="mt-2 text-2xl font-bold">{step < 9 ? "لنجد نقطة البداية المناسبة لك" : "هذه بداية ملف تعلمك"}</h2></div><button aria-label="إغلاق" onClick={() => setOnboardingOpen(false)} className="rounded-xl p-2 hover:bg-white"><X /></button></div><div className="mt-5 h-2 rounded-full bg-[#182431]/10"><div className="h-2 rounded-full bg-[#ff7a00] transition-all" style={{ width: `${Math.min(100, (step / 9) * 100)}%` }} /></div>{step < 9 ? <><p className="mt-8 text-xl font-bold">{current[0]}</p><div className="mt-5 grid gap-3 sm:grid-cols-2">{current[2].map((option) => <button key={option} onClick={() => { update(current[1] as keyof Onboarding, option); setStep((value) => value + 1); }} className="rounded-2xl border border-[#182431]/10 bg-white p-4 text-right font-semibold transition hover:-translate-y-0.5 hover:border-[#ff7a00] hover:bg-[#fff4e9]">{option}</button>)}</div><div className="mt-8 flex justify-between"><button disabled={step === 0} onClick={() => setStep((value) => value - 1)} className="rounded-full border border-[#182431]/15 px-5 py-2 text-sm font-bold disabled:opacity-30">السابق</button><span className="self-center text-xs text-[#182431]/45">يمكنك العودة لتغيير إجاباتك</span></div></> : <OnboardingResult data={onboarding} onClose={() => setOnboardingOpen(false)} />}</div></div>}
+      {onboardingOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#182431]/60 p-4 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="onboarding-title" className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-[1.75rem] bg-[#fbf8f4] p-6 shadow-2xl sm:p-8">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-xs font-bold text-[#c35a00]">خطوة {Math.min(step + 1, 9)} من ٩ · ملف تعلّم مبدئي</span>
+                <h2 id="onboarding-title" className="mt-2 text-2xl font-bold">{step < 9 ? "لنجد نقطة البداية المناسبة لك" : "هذه بداية ملف تعلمك"}</h2>
+              </div>
+              <button aria-label="إغلاق" onClick={() => setOnboardingOpen(false)} className="rounded-xl p-2 hover:bg-white"><X /></button>
+            </div>
+            <div className="mt-5 h-2 rounded-full bg-[#182431]/10">
+              <div className="h-2 rounded-full bg-[#ff7a00] transition-all" style={{ width: `${Math.min(100, (step / 9) * 100)}%` }} />
+            </div>
+            {step < 9 ? (
+              <>
+                <p className="mt-8 text-xl font-bold">{current[0]}</p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {current[2].map((option) => (
+                    <button key={option} onClick={() => { update(current[1] as keyof Onboarding, option); setStep((value) => value + 1); }} className="rounded-2xl border border-[#182431]/10 bg-white p-4 text-right font-semibold transition hover:-translate-y-0.5 hover:border-[#ff7a00] hover:bg-[#fff4e9]">{option}</button>
+                  ))}
+                </div>
+                <div className="mt-8 flex justify-between">
+                  <button disabled={step === 0} onClick={() => setStep((value) => value - 1)} className="rounded-full border border-[#182431]/15 px-5 py-2 text-sm font-bold disabled:opacity-30">السابق</button>
+                  <span className="self-center text-xs text-[#182431]/45">يمكنك العودة لتغيير إجاباتك</span>
+                </div>
+              </>
+            ) : (
+              <OnboardingResult data={onboarding} onClose={() => setOnboardingOpen(false)} teacherSearchHref={teacherSearchHref} />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function SearchSelect({ label, value, onChange, options, placeholder }: { label: string; value: string; onChange: (value: string) => void; options: string[]; placeholder: string }) {
-  return <label className="block rounded-2xl bg-[#f7f3ee] px-3.5 py-2.5"><span className="block text-[10px] font-bold text-[#182431]/45">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold outline-none"><option value="">{placeholder}</option>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
+  return (
+    <label className="block rounded-2xl bg-[#f7f3ee] px-3.5 py-2.5">
+      <span className="block text-[10px] font-bold text-[#182431]/45">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold outline-none">
+        <option value="">{placeholder}</option>
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </label>
+  );
 }
 
 function SectionHeading({ eyebrow, title, copy }: { eyebrow: string; title: React.ReactNode; copy: string }) {
-  return <div><p className="mb-3 text-sm font-bold text-[#c35a00]">{eyebrow}</p><h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{title}</h2><p className="mt-3 max-w-xl text-sm leading-7 text-[#182431]/55">{copy}</p></div>;
-}
-
-function Metric({ value, label }: { value: string; label: string }) {
-  return <div className="rounded-xl bg-white/[0.08] p-3"><b className="block text-lg">{value}</b><span className="mt-1 block text-[9px] text-white/55">{label}</span></div>;
+  return (
+    <div>
+      <p className="mb-3 text-sm font-bold text-[#c35a00]">{eyebrow}</p>
+      <h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{title}</h2>
+      <p className="mt-3 max-w-xl text-sm leading-7 text-[#182431]/55">{copy}</p>
+    </div>
+  );
 }
 
 function PriceInfo({ icon: Icon, title, text }: { icon: typeof Wallet; title: string; text: string }) {
-  return <article className="rounded-2xl border border-[#182431]/[0.08] bg-white p-5"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Icon className="h-5 w-5" /></span><h3 className="mt-4 font-bold">{title}</h3><p className="mt-2 text-sm leading-6 text-[#182431]/55">{text}</p></article>;
+  return (
+    <article className="rounded-2xl border border-[#182431]/[0.08] bg-white p-5">
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Icon className="h-5 w-5" /></span>
+      <h3 className="mt-4 font-bold">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-[#182431]/55">{text}</p>
+    </article>
+  );
 }
 
 function FooterGroup({ title, links }: { title: string; links: [string, string][] }) {
-  return <div><b className="text-sm">{title}</b><div className="mt-4 space-y-3">{links.map(([label, href]) => <a key={href + label} href={href} className="block text-sm text-white/55 hover:text-white">{label}</a>)}</div></div>;
+  return (
+    <div>
+      <b className="text-sm">{title}</b>
+      <div className="mt-4 space-y-3">
+        {links.map(([label, href]) => <a key={href + label} href={href} className="block text-sm text-white/55 hover:text-white">{label}</a>)}
+      </div>
+    </div>
+  );
 }
 
-function OnboardingResult({ data, onClose }: { data: Onboarding; onClose: () => void }) {
-  const me = trpc.auth.me.useQuery();
-  const save = trpc.student.learningProfile.save.useMutation();
-  const savedPayload = useRef<string | null>(null);
-  const payload = JSON.stringify(data);
-
-  useEffect(() => {
-    if (me.data && savedPayload.current !== payload) {
-      savedPayload.current = payload;
-      save.mutate({ ...data, answers: data });
-    }
-  }, [data, me.data, payload, save.mutate]);
-
-  const recommendations = useMemo(() => {
-    if (data.subject === "فيزياء") return teachers.slice(1, 2);
-    if (data.subject === "لغة إنجليزية") return teachers.slice(2, 3);
-    return teachers.slice(0, 2);
-  }, [data.subject]);
-
-  return <div className="mt-8"><div className="rounded-2xl bg-[#fff0e2] p-5"><div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#ff7a00] text-white"><Check /></span><div><b>تم تسجيل تفضيلاتك</b><p className="mt-1 text-sm leading-6 text-[#182431]/60">{me.data ? (save.isSuccess ? "حُفظت تفضيلات التعلم في حسابك." : "جارٍ حفظ تفضيلات التعلم…") : "سجّل الدخول لحفظ تفضيلاتك ومتابعتها من حسابك."}</p></div></div><div className="mt-4 flex flex-wrap gap-2">{[data.role, data.stage, data.grade, data.subject, data.goal, data.time].filter(Boolean).map((item) => <span key={item} className="rounded-full bg-white px-3 py-1 text-xs font-semibold">{item}</span>)}</div></div><div className="mt-6 rounded-2xl border border-[#182431]/10 bg-white p-5"><h3 className="font-bold">الخطوة التالية</h3><p className="mt-2 text-sm leading-7 text-[#182431]/60">انتقل إلى قائمة المعلمين المتاحة، وراجع التفاصيل قبل إرسال طلب الحجز.</p><div className="mt-5 flex flex-wrap gap-3"><Link href={teacherSearchHref} onClick={onClose} className="rounded-full bg-[#ff7a00] px-5 py-3 text-center text-sm font-bold text-white">استكشف المعلمين</Link><button onClick={onClose} className="rounded-full border border-[#182431]/15 px-5 py-3 text-sm font-bold">إغلاق</button></div></div></div>;
+function OnboardingResult({ data, onClose, teacherSearchHref }: { data: Onboarding; onClose: () => void; teacherSearchHref: string }) {
+  return (
+    <div className="mt-8">
+      <div className="rounded-2xl bg-[#fff0e2] p-5">
+        <div className="flex items-start gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#ff7a00] text-white"><Check /></span>
+          <div>
+            <b>تم تسجيل تفضيلاتك</b>
+            <p className="mt-1 text-sm leading-6 text-[#182431]/60">سجّل الدخول لحفظ تفضيلاتك ومتابعتها من حسابك.</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {[data.role, data.stage, data.grade, data.subject, data.goal, data.time].filter(Boolean).map((item) => <span key={item} className="rounded-full bg-white px-3 py-1 text-xs font-semibold">{item}</span>)}
+        </div>
+      </div>
+      <div className="mt-6 rounded-2xl border border-[#182431]/10 bg-white p-5">
+        <h3 className="font-bold">الخطوة التالية</h3>
+        <p className="mt-2 text-sm leading-7 text-[#182431]/60">انتقل إلى قائمة المعلمين المتاحة، وراجع التفاصيل قبل إرسال طلب الحجز.</p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link href={teacherSearchHref} onClick={onClose} className="rounded-full bg-[#ff7a00] px-5 py-3 text-center text-sm font-bold text-white">استكشف المعلمين</Link>
+          <button onClick={onClose} className="rounded-full border border-[#182431]/15 px-5 py-3 text-sm font-bold">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  );
 }
