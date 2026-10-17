@@ -365,8 +365,27 @@ export default function Home() {
           </div>
         </section>
 
+        <section id="testimonials" className="bg-[#f2ece5] py-20 lg:py-24">
+          <div className="mx-auto max-w-7xl px-5 lg:px-10">
+            <SectionHeading eyebrow="آراء أولياء الأمور" title={<>خطوات صغيرة، وثقة أكبر في رحلة التعلم.</>} copy="نماذج توضيحية لصياغة آراء أولياء الأمور. استبدليها بتقييمات حقيقية من مستخدمي المنصة قبل النشر." />
+            <div className="mt-10 grid gap-5 lg:grid-cols-3">
+              {[
+                { quote: "كنت أبحث عن طريقة أساعد بها ابني في تنظيم مذاكرته. وجود مواعيد واضحة ومعلم يتابع احتياجاته ساعدنا على جعل وقت الدراسة أكثر انتظامًا.", name: "أم يوسف", detail: "ولية أمر · نموذج توضيحي" },
+                { quote: "أكثر ما أعجبني أنني أستطيع مراجعة تفاصيل المعلم وسعر الحصة قبل إرسال طلب الحجز، وأختار الموعد الذي يناسب جدول ابنتي.", name: "أبو مريم", detail: "ولي أمر · نموذج توضيحي" },
+                { quote: "ابنتي كانت تحتاج إلى شرح إضافي في بعض المواد. البحث حسب المرحلة والمادة سهّل علينا مقارنة الخيارات واختيار ما يناسب احتياجها.", name: "أم ليلى", detail: "ولية أمر · نموذج توضيحي" },
+              ].map(({ quote, name, detail }) => (
+                <article key={name} className="flex h-full flex-col rounded-[1.5rem] border border-[#182431]/[0.07] bg-white p-6 shadow-sm">
+                  <div className="flex gap-1 text-[#e87800]" aria-label="نموذج رأي"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+                  <blockquote className="mt-5 flex-1 text-sm leading-8 text-[#182431]/75">«{quote}»</blockquote>
+                  <div className="mt-6 border-t border-[#182431]/[0.08] pt-4"><p className="font-bold">{name}</p><p className="mt-1 text-xs text-[#182431]/50">{detail}</p></div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="mx-auto max-w-7xl px-5 py-20 lg:px-10">
-          <SectionHeading eyebrow="الوضوح من البداية" title="تفاصيل واضحة قبل الحجز" copy="راجع سعر الحصة ومدتها وشروط الحجز الظاهرة في ملف المعلم قبل إرسال الطلب." />
+          <SectionHeading eyebrow="قبل إرسال طلب الحجز" title="تفاصيل واضحة قبل الحجز" copy="راجع سعر الحصة ومدتها وشروط الحجز الظاهرة في ملف المعلم قبل إرسال الطلب." />
           <div className="mt-8 grid gap-4 md:grid-cols-3"><PriceInfo icon={Wallet} title="سعر ظاهر" text="يعرض ملف المعلم سعر الحصة ومدتها قبل أن تبدأ طلب الحجز." /><PriceInfo icon={CalendarDays} title="موعد يناسبك" text="تعرّف على المواعيد المتاحة، ثم أرسل طلبك لمراجعة التوفر." /><PriceInfo icon={ShieldCheck} title="بدون مفاجآت" text="بوابات الدفع واسترداد الأموال تحتاج إلى تهيئة مزود رسمي قبل الإطلاق." /></div>
         </section>
 
