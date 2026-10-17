@@ -35,24 +35,31 @@ export default function Teachers() {
   const [query, setQuery] = useState("");
   const [subject, setSubject] = useState("");
   const [stage, setStage] = useState("");
+  const [classGrade, setClassGrade] = useState("");
   const [currency, setCurrency] = useState("");
   const [country, setCountry] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [format, setFormat] = useState("");
   const subjectOptions = stage ? (subjectsByStage[stage] ?? allSubjects) : allSubjects;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setSubject("");
-    const requestedStage = params.get("grade") || "";
+    const requestedStage = params.get("grade") || params.get("stage") || "";
+    const normalizedStage = requestedStage.replace(/[أإآ]/g, "ا");
     setStage(
-      requestedStage.includes("ابتدائي") ? "ابتدائي" :
-      requestedStage.includes("إعدادي") || requestedStage.includes("اعدادي") ? "إعدادي" :
-      requestedStage.includes("ثانوي") ? "ثانوي" :
-      requestedStage.includes("جامعي") ? "جامعي" :
+      normalizedStage.includes("ابتدائي") ? "ابتدائي" :
+      normalizedStage.includes("اعدادي") ? "إعدادي" :
+      normalizedStage.includes("ثانوي") ? "ثانوي" :
+      normalizedStage.includes("جامعي") ? "جامعي" :
       stages.includes(requestedStage) ? requestedStage : ""
     );
+    setSubject(params.get("subject") || "");
+    setClassGrade(params.get("classGrade") || "");
     setQuery(params.get("q") || "");
     setCurrency(params.get("currency") || "");
     setCountry(params.get("country") || "");
+    setMaxPrice(params.get("maxPrice") || params.get("price") || "");
+    setFormat(params.get("format") || "");
 
     let active = true;
     supabase
@@ -146,12 +153,28 @@ export default function Teachers() {
         !hasStageInformation ||
         teacherStages.some((item) => normalizeStage(item) === normalizeStage(stage)) ||
         teacherGrades.some((item) => normalizeStage(item) === normalizeStage(stage));
+      const normalizeFormat = (value: string | null) => {
+        const normalized = (value || "").trim().toLowerCase();
+        if (normalized.includes("فرد") || normalized.includes("individual") || normalized.includes("one-to-one")) return "individual";
+        if (normalized.includes("جماعي") || normalized.includes("group")) return "group";
+        return normalized;
+      };
+      const selectedFormat = normalizeFormat(format);
+      const teacherFormat = normalizeFormat(teacher.teaching_format);
+      const matchesFormat = !format || !teacherFormat || teacherFormat === selectedFormat;
+      const priceLimit = Number(maxPrice.replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[^0-9.]/g, ""));
+      const matchesPrice = !maxPrice || !Number.isFinite(priceLimit) || priceLimit <= 0 ||
+        (teacher.hourly_rate !== null && teacher.hourly_rate <= priceLimit);
+      const normalizedClassGrade = normalizeArabic(classGrade);
+      const matchesClassGrade = !classGrade || teacherGrades.length === 0 ||
+        teacherGrades.some((item) => normalizeArabic(item).includes(normalizedClassGrade) || normalizedClassGrade.includes(normalizeArabic(item)));
       const matchesCurrency = !currency || teacher.currency === currency;
       const matchesCountry = !country || teacher.country === country;
 
-      return matchesQuery && matchesSubject && matchesStage && matchesCurrency && matchesCountry;
+      return matchesQuery && matchesSubject && matchesStage && matchesClassGrade &&
+        matchesFormat && matchesPrice && matchesCurrency && matchesCountry;
     });
-  }, [teachers, query, subject, stage, currency, country]);
+  }, [teachers, query, subject, stage, classGrade, currency, country, maxPrice, format]);
 
   return (
     <main dir="rtl" className="min-h-screen bg-[#fbf8f4] text-[#182431]">
@@ -190,6 +213,9 @@ export default function Teachers() {
           </label>
           <Select label="المادة" value={subject} onChange={setSubject} options={subjectOptions} placeholder="كل المواد" />
           <Select label="المرحلة" value={stage} onChange={(value) => { setStage(value); setSubject(""); }} options={stages} placeholder="كل المراحل" />
+          <Select label="الصف" value={classGrade} onChange={setClassGrade} options={stage ? ({"روضة":["المستوى الأول روضة","المستوى الثاني روضة","المستوى الثالث روضة"],"ابتدائي":["الصف الأول الابتدائي","الصف الثاني الابتدائي","الصف الثالث الابتدائي","الصف الرابع الابتدائي","الصف الخامس الابتدائي","الصف السادس الابتدائي"],"إعدادي":["الصف الأول الإعدادي","الصف الثاني الإعدادي","الصف الثالث الإعدادي"],"ثانوي":["الصف الأول الثانوي","الصف الثاني الثانوي","الصف الثالث الثانوي"],"جامعي":["السنة الجامعية الأولى","السنة الجامعية الثانية","السنة الجامعية الثالثة","السنة الجامعية الرابعة","دراسات عليا"]}[stage] || []) : []} placeholder="كل الصفوف" />
+          <Select label="نوع الدرس" value={format} onChange={setFormat} options={["فردي مباشر","جماعي"]} placeholder="كل الأنواع" />
+          <Select label="أقصى سعر للحصة" value={maxPrice} onChange={setMaxPrice} options={["300","500","700"]} labels={["حتى ٣٠٠ ج.م","حتى ٥٠٠ ج.م","حتى ٧٠٠ ج.م"]} placeholder="كل الأسعار" />
           <Select label="العملة" value={currency} onChange={setCurrency} options={["EGP","SAR","AED","KWD","QAR","BHD","OMR","USD","EUR","GBP","CAD","AUD","TRY","JOD","MAD","DZD","TND"]} placeholder="كل العملات" />
           <Select label="الدولة" value={country} onChange={setCountry} options={["مصر","السعودية","الإمارات","الكويت","قطر","البحرين","عُمان","الأردن","المغرب","الجزائر","تونس","الولايات المتحدة","المملكة المتحدة","كندا","أستراليا","تركيا"]} placeholder="كل الدول" />
         </div>
