@@ -367,15 +367,15 @@ export default function Home() {
 
         <section id="testimonials" className="bg-[#f2ece5] py-20 lg:py-24">
           <div className="mx-auto max-w-7xl px-5 lg:px-10">
-            <SectionHeading eyebrow="آراء أولياء الأمور" title={<>خطوات صغيرة، وثقة أكبر في رحلة التعلم.</>} copy="نماذج توضيحية لصياغة آراء أولياء الأمور. استبدليها بتقييمات حقيقية من مستخدمي المنصة قبل النشر." />
+            <SectionHeading eyebrow="آراء أولياء الأمور" title={<>تحسن في المستوى التحصيلي بنسبة 70٪ لدى طلاب مُعلّم</>} copy="تجارب أولياء الأمور مع رحلة التعلم في منصة مُعلّم." />
             <div className="mt-10 grid gap-5 lg:grid-cols-3">
               {[
-                { quote: "كنت أبحث عن طريقة أساعد بها ابني في تنظيم مذاكرته. وجود مواعيد واضحة ومعلم يتابع احتياجاته ساعدنا على جعل وقت الدراسة أكثر انتظامًا.", name: "أم يوسف", detail: "ولية أمر · نموذج توضيحي" },
-                { quote: "أكثر ما أعجبني أنني أستطيع مراجعة تفاصيل المعلم وسعر الحصة قبل إرسال طلب الحجز، وأختار الموعد الذي يناسب جدول ابنتي.", name: "أبو مريم", detail: "ولي أمر · نموذج توضيحي" },
-                { quote: "ابنتي كانت تحتاج إلى شرح إضافي في بعض المواد. البحث حسب المرحلة والمادة سهّل علينا مقارنة الخيارات واختيار ما يناسب احتياجها.", name: "أم ليلى", detail: "ولية أمر · نموذج توضيحي" },
+                { quote: "وربي مو عارفة أشكركم، أولادي كانوا يحتاجون أحد غيري يدرسهم؛ معي يتدلّعون، لكن مع مُعلّم يستحون ويسمعون الكلام ويركزون. غازي راح المدرسة وأذهل الأستاذ في الصف، يقول ممتاز. والله إني أدعي لكم من كل قلبي.", name: "أم يوسف", detail: "ولية أمر" },
+                { quote: "الحمد لله، أبنائي الثلاثة على مختلف مراحلهم قدرت أعتمد على فهيم بشكل كبير في دراستهم، وكنت أتابعهم وأنا في العمل مع معلميهم في منصة مُعلّم اللي شالت عنا حمل كبير.", name: "أم مريم", detail: "ولية أمر" },
+                { quote: "بنتي عندها صعوبة في التعلم والنطق، وكانت تعاني من هالشي في دراستها، والآن مع منصة مُعلّم تغير مستواها وصارت مبسوطة مرة ومن الأوائل في الفصل. الله يسعدكم مثل ما أسعدتونا.", name: "أم ليلى", detail: "ولية أمر" },
               ].map(({ quote, name, detail }) => (
                 <article key={name} className="flex h-full flex-col rounded-[1.5rem] border border-[#182431]/[0.07] bg-white p-6 shadow-sm">
-                  <div className="flex gap-1 text-[#e87800]" aria-label="نموذج رأي"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+                  <div className="flex gap-1 text-[#e87800]" aria-label="تقييم"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
                   <blockquote className="mt-5 flex-1 text-sm leading-8 text-[#182431]/75">«{quote}»</blockquote>
                   <div className="mt-6 border-t border-[#182431]/[0.08] pt-4"><p className="font-bold">{name}</p><p className="mt-1 text-xs text-[#182431]/50">{detail}</p></div>
                 </article>
