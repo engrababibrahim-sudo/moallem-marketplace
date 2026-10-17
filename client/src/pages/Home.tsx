@@ -246,13 +246,25 @@ export default function Home() {
                 <span className="relative inline-block text-[#f27600]">المعلمين من أي مكان<span className="absolute -bottom-1 right-0 h-2 w-2/3 rounded-full bg-[#ffd7b5]/80" /></span>
               </h1>
               <p className="mt-6 max-w-xl text-base leading-8 text-[#182431]/65 sm:text-lg">
-                اختر معلمك، احجز موعدك، وابدأ رحلة تعلم مصممة لك — بخطوات واضحة ومتابعة تطمّن الأسرة.
+                مع مُعلّم، اختَر المدرس المناسب، وتعلّم بالطريقة التي تناسبك، وحقّق أهدافك خطوة بخطوة.
               </p>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <button onClick={() => document.getElementById("teacher-search")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="rounded-full bg-[#ff7a00] px-6 py-3.5 font-bold text-white shadow-lg shadow-orange-500/20 hover:-translate-y-0.5">
-                  ابحث عن معلم <ArrowLeft className="mr-2 inline h-4 w-4" />
-                </button>
-                <Link href="/teacher/register" className="rounded-full border border-[#182431]/15 bg-white/70 px-6 py-3.5 font-bold hover:bg-white">انضم كمعلم</Link>
+              <div className="mt-7 grid max-w-xl gap-4 sm:grid-cols-2">
+                <article className="flex items-start gap-3 rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Sparkles className="h-5 w-5" /></span>
+                  <div><h2 className="font-bold">تعلّم على مقاسك</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">خطة تعليمية تراعي مستواك واحتياجاتك وتساعدك على التقدم بثقة.</p></div>
+                </article>
+                <article className="flex items-start gap-3 rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><BookOpen className="h-5 w-5" /></span>
+                  <div><h2 className="font-bold">حصص فردية أونلاين</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">تواصل مباشر واهتمام أكبر بأسئلتك ونقاط احتياجك.</p></div>
+                </article>
+                <article className="flex items-start gap-3 rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Wallet className="h-5 w-5" /></span>
+                  <div><h2 className="font-bold">اختيارات تناسب ميزانيتك</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">أسعار واضحة وباقات مرنة تساعدك على تنظيم مصروفات التعلّم.</p></div>
+                </article>
+                <article className="flex items-start gap-3 rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><GraduationCap className="h-5 w-5" /></span>
+                  <div><h2 className="font-bold">من الروضة إلى الجامعة</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">دعم تعليمي لمختلف المراحل والتخصصات المتاحة على المنصة.</p></div>
+                </article>
               </div>
               <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-xs font-semibold text-[#182431]/55">
                 <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#f27600]" /> ملفات معلمين قيد التحقق</span>
