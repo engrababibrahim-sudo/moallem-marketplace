@@ -23,7 +23,9 @@ export default async function handler(req: any, res: any) {
       redirect_uri: redirectUri(),
       state,
       include_granted_scopes: "true",
-      scope: "user:read:user",
+      // Teachers authorize their own Zoom accounts. The create endpoint uses /users/me/meetings,
+      // so it needs user-level meeting scopes; S2S admin scopes do not grant these user OAuth tokens.
+      scope: "user:read:user meeting:write:meeting meeting:read:meeting",
     });
     return json(res, 200, { url: "https://zoom.us/oauth/authorize?" + query.toString() });
   } catch (e) {

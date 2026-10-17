@@ -239,48 +239,48 @@ export default function Home() {
           <div className="grid items-center gap-10 lg:grid-cols-[1fr_.92fr] lg:gap-14">
             <div className="relative z-10">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#ff7a00]/20 bg-white/80 px-4 py-2 text-xs font-bold text-[#b85400]">
-                <Sparkles className="h-4 w-4" /> تعلّم فردي مع معلمين موثّقين
+                <Sparkles className="h-4 w-4" /> مدرسين خصوصيين
               </div>
               <h1 className="max-w-2xl text-[43px] font-bold leading-[1.2] tracking-[-.04em] sm:text-6xl lg:text-[68px]">
-                تعلم مع أفضل<br />
-                <span className="relative inline-block text-[#f27600]">المعلمين من أي مكان<span className="absolute -bottom-1 right-0 h-2 w-2/3 rounded-full bg-[#ffd7b5]/80" /></span>
+                رحلتك نحو<br />
+                <span className="relative inline-block text-[#f27600]">التفوق تبدأ من هنا!<span className="absolute -bottom-1 right-0 h-2 w-2/3 rounded-full bg-[#ffd7b5]/80" /></span>
               </h1>
               <p className="mt-6 max-w-xl text-base leading-8 text-[#182431]/65 sm:text-lg">
-                اختر معلمك، احجز موعدك، وابدأ رحلة تعلم مصممة لك — بخطوات واضحة ومتابعة تطمّن الأسرة.
+                مع مُعلّم، اختَر المدرس المناسب، وتعلّم بالطريقة التي تناسبك، وحقّق أهدافك خطوة بخطوة.
               </p>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <button onClick={() => document.getElementById("teacher-search")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="rounded-full bg-[#ff7a00] px-6 py-3.5 font-bold text-white shadow-lg shadow-orange-500/20 hover:-translate-y-0.5">
-                  ابحث عن معلم <ArrowLeft className="mr-2 inline h-4 w-4" />
-                </button>
-                <Link href="/teacher/register" className="rounded-full border border-[#182431]/15 bg-white/70 px-6 py-3.5 font-bold hover:bg-white">انضم كمعلم</Link>
+              <div className="mt-7 grid max-w-xl gap-4 sm:grid-cols-2">
+                <article className="flex items-start gap-3 rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Sparkles className="h-5 w-5" /></span>
+                  <div><h2 className="font-bold">تعلّم على مقاسك</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">خطة تعليمية تراعي مستواك واحتياجاتك وتساعدك على التقدم بثقة.</p></div>
+                </article>
+                <article className="flex items-start gap-3 rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><BookOpen className="h-5 w-5" /></span>
+                  <div><h2 className="font-bold">حصص فردية أونلاين</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">تواصل مباشر واهتمام أكبر بأسئلتك ونقاط احتياجك.</p></div>
+                </article>
+                <article className="flex items-start gap-3 rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Wallet className="h-5 w-5" /></span>
+                  <div><h2 className="font-bold">اختيارات تناسب ميزانيتك</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">أسعار واضحة وباقات مرنة تساعدك على تنظيم مصروفات التعلّم.</p></div>
+                </article>
+                <article className="flex items-start gap-3 rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><GraduationCap className="h-5 w-5" /></span>
+                  <div><h2 className="font-bold">من الروضة إلى الجامعة</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">دعم تعليمي لمختلف المراحل والتخصصات المتاحة على المنصة.</p></div>
+                </article>
               </div>
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-xs font-semibold text-[#182431]/55">
-                <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#f27600]" /> ملفات معلمين قيد التحقق</span>
-                <span className="inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#f27600]" /> مواعيد تناسب يومك</span>
-                <span className="inline-flex items-center gap-2"><Wallet className="h-4 w-4 text-[#f27600]" /> السعر واضح قبل الطلب</span>
-              </div>
+              {/* Removed extra trust/marketing strip to keep the agreed hero focused on the four benefit cards. */}
             </div>
 
             <div className="relative mx-auto w-full max-w-[520px]">
-              <div className="absolute -left-4 top-12 z-10 hidden rounded-2xl border border-white/80 bg-white/95 p-3.5 shadow-xl shadow-[#182431]/10 sm:block">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><BadgeCheck className="h-5 w-5" /></span>
-                  <span><b className="block text-xs">تعلم بثقة</b><small className="mt-1 block text-[10px] text-[#182431]/55">ملفات واضحة ومراجعة</small></span>
-                </div>
-              </div>
+              {/* Removed the extra floating badge not included in the agreed hero. */}
               <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-[#eee4d8] shadow-[0_25px_70px_-30px_rgba(24,36,49,.35)] sm:aspect-[1.08/1]">
-                <img src="/manus-storage/moallem-tutor-hero_c772e0b2.jpg" alt="معلمة تشرح لطالبة خلال جلسة تعلم منزلية" className="absolute inset-0 h-full w-full object-cover object-center" />
+                <img src="https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&w=1400&q=85" alt="معلمة تشرح لطالبة خلال جلسة تعلم منزلية" className="absolute inset-0 h-full w-full object-cover object-center" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#182431]/70 via-transparent to-transparent" />
-                <div className="absolute right-5 top-5 rounded-full border border-white/30 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-[#182431]">مصر · حصص أونلاين</div>
+                <div className="absolute right-5 top-5 rounded-full border border-white/30 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-[#182431]">حصص فردية أونلاين</div>
                 <div className="absolute bottom-5 right-5 left-5 flex items-end justify-between gap-3 text-white">
                   <div><span className="text-xs text-white/75">تعلم خطوة بخطوة</span><h2 className="mt-1 text-xl font-bold sm:text-2xl">كل حصة تقرّبك لهدفك</h2></div>
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#ff7a00] shadow-lg"><BookOpen className="h-5 w-5" /></span>
                 </div>
               </div>
-              <div className="absolute -bottom-5 -right-3 hidden rounded-2xl border border-white/70 bg-white px-4 py-3 shadow-xl sm:block">
-                <div className="flex items-center gap-2 text-xs font-bold"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#fff0e2] text-[#b85a08]"><ShieldCheck className="h-4 w-4" /></span><span>اختيار مبني على احتياجك</span></div>
-                <p className="mt-1 text-[10px] text-[#182431]/50">تفاصيل واضحة تساعدك على اتخاذ قرار مناسب</p>
-              </div>
+              {/* Removed the extra floating badge not included in the agreed hero. */}
             </div>
           </div>
 
@@ -308,16 +308,16 @@ export default function Home() {
         </section>
 
         <section id="how" className="mx-auto max-w-7xl px-5 py-20 lg:px-10 lg:py-24">
-          <SectionHeading eyebrow="بكل بساطة" title={<>من البحث إلى أول إنجاز،<br className="hidden sm:block" /> نرتبها معك.</>} copy="خطوات واضحة تساعدك تختار، تحجز، وتتابع التقدم دون تعقيد." />
+          <SectionHeading eyebrow="للطلاب وأولياء الأمور" title={<>لماذا أدرس أبنائي في منصة مُعلّم؟</>} copy="نساعدك على اختيار تجربة تعلم واضحة، ومتابعة تقدم أبنائك بثقة." />
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              [Search, "١", "ابحث بذكاء", "اختر المادة والمرحلة، ثم قارن الملفات والأسعار."],
-              [ShieldCheck, "٢", "اختر بثقة", "اطلع على خبرة المعلم وطريقته والمواعيد المتاحة."],
-              [CalendarDays, "٣", "احجز موعدك", "أرسل طلب الدرس في الوقت الذي يناسبك."],
-              [BookOpen, "٤", "تابع تقدمك", "احتفظ بملخص الدرس والخطوة القادمة للتعلم."],
-            ].map(([Icon, number, title, copy]) => {
-              const StepIcon = Icon as typeof Search;
-              return <article key={String(number)} className="group rounded-[1.5rem] bg-[#f4efe9] p-5 transition hover:-translate-y-1 hover:bg-[#fff0e2]"><div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#df6900] shadow-sm"><StepIcon className="h-5 w-5" /></span><span className="text-xs font-bold text-[#182431]/25">{String(number)}</span></div><h3 className="mt-7 text-lg font-bold">{String(title)}</h3><p className="mt-2 text-sm leading-6 text-[#182431]/58">{String(copy)}</p></article>;
+              [ShieldCheck, "الضمان الذهبي", "في حال لم تناسبك الحصة الأولى فلن يتم احتسابها ويمكنك استرجاع المبلغ، وفي حال لم يناسبك المعلم سيتم تبديله فورًا."],
+              [CalendarDays, "تقارير دورية", "تصلك تقارير منتظمة عن أداء الأبناء من المعلمين بعد الحصص لمتابعة التقدم أولًا بأول."],
+              [BookOpen, "جميع المواد والمراحل", "توفر جميع المواد والمراحل للتعليم العام والجامعي — من الروضة وحتى الجامعة."],
+              [Users, "معلمون مختارون بعناية", "أفضل المعلمين المختارين بعناية فائقة عبر مقابلات واختبارات كفاءة قبل الانضمام للمنصة."],
+            ].map(([Icon, title, copy]) => {
+              const BenefitIcon = Icon as typeof ShieldCheck;
+              return <article key={String(title)} className="group rounded-[1.5rem] bg-[#f4efe9] p-5 transition hover:-translate-y-1 hover:bg-[#fff0e2]"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#df6900] shadow-sm"><BenefitIcon className="h-5 w-5" /></span><h3 className="mt-6 text-lg font-bold">{String(title)}</h3><p className="mt-2 text-sm leading-7 text-[#182431]/65">{String(copy)}</p></article>;
             })}
           </div>
         </section>
@@ -365,10 +365,25 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-5 py-20 lg:px-10">
-          <SectionHeading eyebrow="الوضوح من البداية" title="تفاصيل واضحة قبل الحجز" copy="راجع سعر الحصة ومدتها وشروط الحجز الظاهرة في ملف المعلم قبل إرسال الطلب." />
-          <div className="mt-8 grid gap-4 md:grid-cols-3"><PriceInfo icon={Wallet} title="سعر ظاهر" text="يعرض ملف المعلم سعر الحصة ومدتها قبل أن تبدأ طلب الحجز." /><PriceInfo icon={CalendarDays} title="موعد يناسبك" text="تعرّف على المواعيد المتاحة، ثم أرسل طلبك لمراجعة التوفر." /><PriceInfo icon={ShieldCheck} title="بدون مفاجآت" text="بوابات الدفع واسترداد الأموال تحتاج إلى تهيئة مزود رسمي قبل الإطلاق." /></div>
+        <section id="testimonials" className="bg-[#f2ece5] py-20 lg:py-24">
+          <div className="mx-auto max-w-7xl px-5 lg:px-10">
+            <SectionHeading eyebrow="آراء أولياء الأمور" title={<>تحسن في المستوى التحصيلي بنسبة 70٪ لدى طلاب مُعلّم</>} copy="تجارب أولياء الأمور مع رحلة التعلم في منصة مُعلّم." />
+            <div className="mt-10 grid gap-5 lg:grid-cols-3">
+              {[
+                { quote: "كنت محتاجة حد يساعد أولادي في المذاكرة، لأنهم معايا أحيانًا بيتكاسلوا ومبيركزوش كويس. لكن مع الحصص في مُعلّم بقوا أكثر التزامًا واهتمامًا بالدراسة، وحتى مدرسهم في المدرسة لاحظ التحسن وشجعهم. وده أسعدني جدًا.", name: "أم يوسف", detail: "ولية أمر" },
+                { quote: "مع انشغالي بالشغل، كان صعب أتابع دراسة أولادي الثلاثة بشكل مستمر، لكن مُعلّم ساعدتني أنظم مذاكرتهم وأتابع كل واحد حسب مرحلته الدراسية. التجربة وفرت عليّ وقت ومجهود كبير، وخلّت متابعة دراستهم أسهل.", name: "أم مريم", detail: "ولية أمر" },
+                { quote: "بنتي كانت بتواجه صعوبة في فهم بعض الدروس، وده كان مأثر على ثقتها بنفسها. مع الشرح والمتابعة بدأت تستوعب بشكل أفضل وتشارك في الفصل بثقة أكبر. فرحانة بالتقدم اللي حققته، وبشكر كل حد ساعدها.", name: "أم ليلى", detail: "ولية أمر" },
+              ].map(({ quote, name, detail }) => (
+                <article key={name} className="flex h-full flex-col rounded-[1.5rem] border border-[#182431]/[0.07] bg-white p-6 shadow-sm">
+                  <div className="flex gap-1 text-[#e87800]" aria-label="تقييم"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+                  <blockquote className="mt-5 flex-1 text-sm leading-8 text-[#182431]/75">«{quote}»</blockquote>
+                  <div className="mt-6 border-t border-[#182431]/[0.08] pt-4"><p className="font-bold">{name}</p><p className="mt-1 text-xs text-[#182431]/50">{detail}</p></div>
+                </article>
+              ))}
+            </div>
+          </div>
         </section>
+
 
         <section id="faq" className="border-y border-[#182431]/[0.06] bg-white py-20">
           <div className="mx-auto max-w-3xl px-5"><div className="text-center"><p className="mb-3 text-sm font-bold text-[#c35a00]">الأسئلة الشائعة</p><h2 className="text-3xl font-bold sm:text-4xl">كل ما تحتاج معرفته</h2></div><div className="mt-9 space-y-3">{faqs.map((question, index) => <div key={question} className="rounded-2xl bg-[#fbf8f4] px-5"><button className="flex w-full items-center justify-between gap-4 py-5 text-right font-bold" onClick={() => setFaq(faq === index ? null : index)}>{question}<ChevronDown className={`h-5 w-5 shrink-0 transition-transform ${faq === index ? "rotate-180" : ""}`} /></button>{faq === index && <p className="pb-5 text-sm leading-7 text-[#182431]/60">{["اختر المادة والمرحلة التعليمية، ثم قارن بين المعلمين من خلال بيانات ملفاتهم والمواعيد والأسعار المعروضة.", "راجع التخصص والمواد والمراحل والخبرة المذكورة في ملف المعلم. لا تعتمد على أي ضمان أو اعتماد إلا إذا كان ظاهرًا بوضوح في المنصة.", "اختر موعدًا متاحًا وأرسل طلب الحجز، ثم تابع حالته من حسابك. لا تعتبر الحجز مؤكدًا إلا عندما تظهر حالته مؤكدة.", "استخدم فقط وسيلة الدفع التي تظهر فعليًا داخل المنصة. لا ترسل بيانات بطاقتك أو أموالك خارج قناة دفع موثوقة، وتحقق من حالة العملية قبل اعتبارها ناجحة.", "تواصل مع دعم المنصة لشرح المشكلة. استبدال المعلم أو استرداد المبلغ ليس مضمونًا إلا إذا كانت شروط الخدمة المنشورة تنص على ذلك.", "لا تفترض أن الحصة مسجلة. التسجيل لا يكون متاحًا إلا إذا ظهر رابط تسجيل فعلي وكانت آلية التسجيل وموافقة المشاركين واضحة.", "بعد تأكيد الحجز، راجع تفاصيله بحثًا عن رابط الحصة أو تعليمات الانضمام. إذا لم تظهر، تواصل مع الدعم قبل موعد الدرس.", "راجع تفاصيل السعر وشروط الإلغاء والاسترداد قبل الدفع. لا تفترض وجود باقات شهرية أو استرداد تلقائي ما لم تكن هذه الخيارات والشروط معروضة ومفعلة داخل المنصة."][index]}</p>}</div>)}</div></div>
