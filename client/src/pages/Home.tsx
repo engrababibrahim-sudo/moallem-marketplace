@@ -236,26 +236,22 @@ export default function Home() {
           <div className="grid items-center gap-10 lg:grid-cols-[1fr_.92fr] lg:gap-14">
             <div className="relative z-10">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#ff7a00]/20 bg-white/80 px-4 py-2 text-xs font-bold text-[#b85400]">
-                <Sparkles className="h-4 w-4" /> تعلّم فردي مع معلمين موثّقين
+                <Sparkles className="h-4 w-4" /> مدرسين خصوصيين
               </div>
               <h1 className="max-w-2xl text-[43px] font-bold leading-[1.2] tracking-[-.04em] sm:text-6xl lg:text-[68px]">
-                تعلم مع أفضل<br />
-                <span className="relative inline-block text-[#f27600]">المعلمين من أي مكان<span className="absolute -bottom-1 right-0 h-2 w-2/3 rounded-full bg-[#ffd7b5]/80" /></span>
+                رحلتك نحو<br />
+                <span className="relative inline-block text-[#f27600]">التفوق تبدأ من هنا!<span className="absolute -bottom-1 right-0 h-2 w-2/3 rounded-full bg-[#ffd7b5]/80" /></span>
               </h1>
               <p className="mt-6 max-w-xl text-base leading-8 text-[#182431]/65 sm:text-lg">
-                اختر معلمك، احجز موعدك، وابدأ رحلة تعلم مصممة لك — بخطوات واضحة ومتابعة تطمّن الأسرة.
+                مع مُعلّم، اختر المدرس المناسب، وتعلّم بالطريقة التي تناسبك، وحقق أهدافك خطوة بخطوة.
               </p>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <button onClick={() => document.getElementById("teacher-search")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="rounded-full bg-[#ff7a00] px-6 py-3.5 font-bold text-white shadow-lg shadow-orange-500/20 hover:-translate-y-0.5">
-                  ابحث عن معلم <ArrowLeft className="mr-2 inline h-4 w-4" />
-                </button>
-                <Link href="/teacher/register" className="rounded-full border border-[#182431]/15 bg-white/70 px-6 py-3.5 font-bold hover:bg-white">انضم كمعلم</Link>
+              <div className="mt-8 grid grid-cols-2 gap-3">
+                <article className="rounded-2xl border border-[#182431]/[0.08] bg-white/90 p-4 sm:p-5"><span className="float-right ml-3 grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Sparkles className="h-5 w-5" /></span><h2 className="font-bold">تعلّم على مقاسك</h2><p className="mt-2 text-xs leading-6 text-[#182431]/60">خطة تعليمية تراعي مستواك واحتياجاتك وتساعدك على التقدم بثقة.</p></article>
+                <article className="rounded-2xl border border-[#182431]/[0.08] bg-white/90 p-4 sm:p-5"><span className="float-right ml-3 grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><BookOpen className="h-5 w-5" /></span><h2 className="font-bold">حصص فردية أونلاين</h2><p className="mt-2 text-xs leading-6 text-[#182431]/60">تواصل مباشر واهتمام أكبر بأسئلتك ونقاط احتياجك.</p></article>
+                <article className="rounded-2xl border border-[#182431]/[0.08] bg-white/90 p-4 sm:p-5"><span className="float-right ml-3 grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><GraduationCap className="h-5 w-5" /></span><h2 className="font-bold">من الروضة إلى الجامعة</h2><p className="mt-2 text-xs leading-6 text-[#182431]/60">دعم تعليمي لمختلف المراحل والتخصصات المتاحة على المنصة.</p></article>
+                <article className="rounded-2xl border border-[#182431]/[0.08] bg-white/90 p-4 sm:p-5"><span className="float-right ml-3 grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><Wallet className="h-5 w-5" /></span><h2 className="font-bold">اختيارات تناسب ميزانيتك</h2><p className="mt-2 text-xs leading-6 text-[#182431]/60">أسعار واضحة تساعدك على تنظيم مصروفاتك.</p></article>
               </div>
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-xs font-semibold text-[#182431]/55">
-                <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#f27600]" /> ملفات معلمين قيد التحقق</span>
-                <span className="inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#f27600]" /> مواعيد تناسب يومك</span>
-                <span className="inline-flex items-center gap-2"><Wallet className="h-4 w-4 text-[#f27600]" /> السعر واضح قبل الطلب</span>
-              </div>
+              <div className="mt-5 flex flex-wrap gap-3"><button onClick={openOnboarding} className="rounded-full bg-[#182431] px-6 py-3.5 font-bold text-white shadow-md">ابدأ مجانًا <ArrowLeft className="mr-2 inline h-4 w-4" /></button><Link href="/teacher/register" className="rounded-full border border-[#182431]/15 bg-white/70 px-6 py-3.5 font-bold hover:bg-white">انضم كمعلم</Link></div>
             </div>
 
             <div className="relative mx-auto w-full max-w-[520px]">
