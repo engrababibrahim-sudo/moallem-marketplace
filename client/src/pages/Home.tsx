@@ -266,20 +266,11 @@ export default function Home() {
                   <div><h2 className="font-bold">من الروضة إلى الجامعة</h2><p className="mt-1 text-sm leading-6 text-[#182431]/60">دعم تعليمي لمختلف المراحل والتخصصات المتاحة على المنصة.</p></div>
                 </article>
               </div>
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-xs font-semibold text-[#182431]/55">
-                <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#f27600]" /> ملفات معلمين قيد التحقق</span>
-                <span className="inline-flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#f27600]" /> مواعيد تناسب يومك</span>
-                <span className="inline-flex items-center gap-2"><Wallet className="h-4 w-4 text-[#f27600]" /> السعر واضح قبل الطلب</span>
-              </div>
+              {/* Removed extra trust/marketing strip to keep the agreed hero focused on the four benefit cards. */}
             </div>
 
             <div className="relative mx-auto w-full max-w-[520px]">
-              <div className="absolute -left-4 top-12 z-10 hidden rounded-2xl border border-white/80 bg-white/95 p-3.5 shadow-xl shadow-[#182431]/10 sm:block">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]"><BadgeCheck className="h-5 w-5" /></span>
-                  <span><b className="block text-xs">تعلم بثقة</b><small className="mt-1 block text-[10px] text-[#182431]/55">ملفات واضحة ومراجعة</small></span>
-                </div>
-              </div>
+              {/* Removed the extra floating badge not included in the agreed hero. */}
               <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-[#eee4d8] shadow-[0_25px_70px_-30px_rgba(24,36,49,.35)] sm:aspect-[1.08/1]">
                 <img src="/manus-storage/moallem-tutor-hero_c772e0b2.jpg" alt="معلمة تشرح لطالبة خلال جلسة تعلم منزلية" className="absolute inset-0 h-full w-full object-cover object-center" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#182431]/70 via-transparent to-transparent" />
@@ -289,10 +280,7 @@ export default function Home() {
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#ff7a00] shadow-lg"><BookOpen className="h-5 w-5" /></span>
                 </div>
               </div>
-              <div className="absolute -bottom-5 -right-3 hidden rounded-2xl border border-white/70 bg-white px-4 py-3 shadow-xl sm:block">
-                <div className="flex items-center gap-2 text-xs font-bold"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#fff0e2] text-[#b85a08]"><ShieldCheck className="h-4 w-4" /></span><span>اختيار مبني على احتياجك</span></div>
-                <p className="mt-1 text-[10px] text-[#182431]/50">تفاصيل واضحة تساعدك على اتخاذ قرار مناسب</p>
-              </div>
+              {/* Removed the extra floating badge not included in the agreed hero. */}
             </div>
           </div>
 
