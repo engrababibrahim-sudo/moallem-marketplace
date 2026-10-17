@@ -308,16 +308,16 @@ export default function Home() {
         </section>
 
         <section id="how" className="mx-auto max-w-7xl px-5 py-20 lg:px-10 lg:py-24">
-          <SectionHeading eyebrow="بكل بساطة" title={<>من البحث إلى أول إنجاز،<br className="hidden sm:block" /> نرتبها معك.</>} copy="خطوات واضحة تساعدك تختار، تحجز، وتتابع التقدم دون تعقيد." />
+          <SectionHeading eyebrow="للطلاب وأولياء الأمور" title={<>لماذا أدرس أبنائي في منصة مُعلّم؟</>} copy="نساعدك على اختيار تجربة تعلم واضحة، ومتابعة تقدم أبنائك بثقة." />
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              [Search, "١", "ابحث بذكاء", "اختر المادة والمرحلة، ثم قارن الملفات والأسعار."],
-              [ShieldCheck, "٢", "اختر بثقة", "اطلع على خبرة المعلم وطريقته والمواعيد المتاحة."],
-              [CalendarDays, "٣", "احجز موعدك", "أرسل طلب الدرس في الوقت الذي يناسبك."],
-              [BookOpen, "٤", "تابع تقدمك", "احتفظ بملخص الدرس والخطوة القادمة للتعلم."],
-            ].map(([Icon, number, title, copy]) => {
-              const StepIcon = Icon as typeof Search;
-              return <article key={String(number)} className="group rounded-[1.5rem] bg-[#f4efe9] p-5 transition hover:-translate-y-1 hover:bg-[#fff0e2]"><div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#df6900] shadow-sm"><StepIcon className="h-5 w-5" /></span><span className="text-xs font-bold text-[#182431]/25">{String(number)}</span></div><h3 className="mt-7 text-lg font-bold">{String(title)}</h3><p className="mt-2 text-sm leading-6 text-[#182431]/58">{String(copy)}</p></article>;
+              [ShieldCheck, "الضمان الذهبي", "في حال لم تناسبك الحصة الأولى فلن يتم احتسابها ويمكنك استرجاع المبلغ، وفي حال لم يناسبك المعلم سيتم تبديله فورًا."],
+              [CalendarDays, "تقارير دورية", "تصلك تقارير منتظمة عن أداء الأبناء من المعلمين بعد الحصص لمتابعة التقدم أولًا بأول."],
+              [BookOpen, "جميع المواد والمراحل", "توفر جميع المواد والمراحل للتعليم العام والجامعي — من الروضة وحتى الجامعة."],
+              [Users, "معلمون مختارون بعناية", "أفضل المعلمين المختارين بعناية فائقة عبر مقابلات واختبارات كفاءة قبل الانضمام للمنصة."],
+            ].map(([Icon, title, copy]) => {
+              const BenefitIcon = Icon as typeof ShieldCheck;
+              return <article key={String(title)} className="group rounded-[1.5rem] bg-[#f4efe9] p-5 transition hover:-translate-y-1 hover:bg-[#fff0e2]"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#df6900] shadow-sm"><BenefitIcon className="h-5 w-5" /></span><h3 className="mt-6 text-lg font-bold">{String(title)}</h3><p className="mt-2 text-sm leading-7 text-[#182431]/65">{String(copy)}</p></article>;
             })}
           </div>
         </section>
