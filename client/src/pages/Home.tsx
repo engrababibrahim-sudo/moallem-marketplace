@@ -272,7 +272,7 @@ export default function Home() {
             <div className="relative mx-auto w-full max-w-[520px]">
               {/* Removed the extra floating badge not included in the agreed hero. */}
               <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-[#eee4d8] shadow-[0_25px_70px_-30px_rgba(24,36,49,.35)] sm:aspect-[1.08/1]">
-                <img src="/manus-storage/moallem-tutor-hero_c772e0b2.jpg" alt="معلمة تشرح لطالبة خلال جلسة تعلم منزلية" className="absolute inset-0 h-full w-full object-cover object-center" />
+                <img src="https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&w=1400&q=85" alt="معلمة تشرح لطالبة خلال جلسة تعلم منزلية" className="absolute inset-0 h-full w-full object-cover object-center" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#182431]/70 via-transparent to-transparent" />
                 <div className="absolute right-5 top-5 rounded-full border border-white/30 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-[#182431]">حصص فردية أونلاين</div>
                 <div className="absolute bottom-5 right-5 left-5 flex items-end justify-between gap-3 text-white">
