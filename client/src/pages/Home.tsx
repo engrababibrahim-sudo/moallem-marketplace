@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getOnboardingProgress } from "../../../shared/onboarding";
 import { Link, useLocation } from "wouter";
-import { trpc } from "../lib/trpc";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -102,9 +101,6 @@ const navLinks = [
   ["للمعلمين", "#tutors"],
   ["الأسئلة الشائعة", "#faq"],
 ] as const;
-
-// Shared by the home page, footer, and onboarding result.
-const teacherSearchHref = "/teachers";
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -334,6 +330,10 @@ function SearchSelect({ label, value, onChange, options, placeholder }: { label:
 
 function SectionHeading({ eyebrow, title, copy }: { eyebrow: string; title: React.ReactNode; copy: string }) {
   return <div><p className="mb-3 text-sm font-bold text-[#c35a00]">{eyebrow}</p><h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{title}</h2><p className="mt-3 max-w-xl text-sm leading-7 text-[#182431]/55">{copy}</p></div>;
+}
+
+function Metric({ value, label }: { value: string; label: string }) {
+  return <div className="rounded-xl bg-white/[0.08] p-3"><b className="block text-lg">{value}</b><span className="mt-1 block text-[9px] text-white/55">{label}</span></div>;
 }
 
 function PriceInfo({ icon: Icon, title, text }: { icon: typeof Wallet; title: string; text: string }) {
