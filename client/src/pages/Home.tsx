@@ -1,1230 +1,646 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { getOnboardingProgress } from "../../../shared/onboarding";
-import { Link, useLocation } from "wouter";
-import { trpc } from "../lib/trpc";
+import { useState } from "react";
+import { Link } from "wouter";
 import {
   ArrowLeft,
-  BadgeCheck,
   BookOpen,
   CalendarDays,
-  Check,
+  CheckCircle2,
   ChevronDown,
-  Clock3,
   GraduationCap,
-  Languages,
+  HeartHandshake,
   Menu,
   MessageCircle,
   Search,
   ShieldCheck,
   Sparkles,
+  Star,
   Users,
+  Video,
   Wallet,
   X,
 } from "lucide-react";
 
-type Onboarding = {
-  role: string;
-  stage: string;
-  grade: string;
-  subject: string;
-  goal: string;
-  level: string;
-  needs: string;
-  format: string;
-  time: string;
-};
+const subjects = [
+  "اللغة العربية",
+  "اللغة الإنجليزية",
+  "الرياضيات",
+  "العلوم",
+  "الدراسات الاجتماعية",
+  "القرآن الكريم",
+  "البرمجة",
+];
 
-const initial: Onboarding = {
-  role: "",
-  stage: "",
-  grade: "",
-  subject: "",
-  goal: "",
-  level: "",
-  needs: "",
-  format: "",
-  time: "",
-};
-
-const teachers = [
+const steps = [
   {
-    id: "sara",
-    name: "سارة محمود",
-    subject: "رياضيات",
-    stage: "الثانوية العامة",
-    years: 8,
-    rating: "4.9",
-    price: "٣٢٠",
-    match: "٩٤٪",
-    initials: "س",
-    color: "#f6e2d5",
-    area: "القاهرة · أونلاين",
+    icon: Search,
+    number: "01",
+    title: "ابحث عن معلمك",
+    description:
+      "اختر المادة والمرحلة الدراسية وابحث عن المعلم المناسب لاحتياجاتك.",
   },
   {
-    id: "omar",
-    name: "عمر عبدالسلام",
-    subject: "فيزياء",
-    stage: "الثانوية العامة",
-    years: 6,
-    rating: "4.8",
-    price: "٢٨٠",
-    match: "٩١٪",
-    initials: "ع",
-    color: "#e4eadc",
-    area: "الجيزة · أونلاين",
+    icon: CalendarDays,
+    number: "02",
+    title: "احجز موعدك",
+    description:
+      "راجع مواعيد المعلم المتاحة واختر الوقت المناسب لك ولأسرتك.",
   },
   {
-    id: "noura",
-    name: "نورهان علي",
-    subject: "لغة إنجليزية",
-    stage: "الإعدادية",
-    years: 10,
-    rating: "5.0",
-    price: "٢٥٠",
-    match: "٨٩٪",
-    initials: "ن",
-    color: "#e9e2f1",
-    area: "الإسكندرية · أونلاين",
+    icon: Video,
+    number: "03",
+    title: "ابدأ التعلم",
+    description:
+      "تابع حصتك عبر الإنترنت وواصل رحلتك نحو التفوق خطوة بخطوة.",
+  },
+];
+
+const benefits = [
+  {
+    icon: ShieldCheck,
+    title: "تعليم أكثر أمانًا",
+    description:
+      "نهتم بتجربة تعليمية منظمة تساعد الطالب وولي الأمر على متابعة الرحلة التعليمية.",
+  },
+  {
+    icon: Users,
+    title: "معلمون لمراحل مختلفة",
+    description:
+      "ابحث عن معلم يناسب المرحلة الدراسية والمادة التي يحتاجها الطالب.",
+  },
+  {
+    icon: CalendarDays,
+    title: "مواعيد تناسبك",
+    description:
+      "اختر الموعد المناسب وفق المواعيد المتاحة لدى المعلم.",
+  },
+  {
+    icon: HeartHandshake,
+    title: "تجربة تتمحور حول الطالب",
+    description:
+      "اجعل احتياجات الطالب وأهدافه نقطة البداية في اختيار الحصص.",
   },
 ];
 
 const faqs = [
-  "كيف أختار المعلم المناسب؟",
-  "هل أستطيع متابعة تعلم أكثر من ابن؟",
-  "كيف يتم حجز الدرس؟",
-  "هل الأسعار المعروضة نهائية؟",
-  "كيف تتم عملية الدفع؟",
-  "هل يمكن إلغاء الحجز أو طلب استرداد المبلغ؟",
-  "هل يتم تسجيل الحصص؟",
-  "كيف أتابع مستوى الطالب؟",
+  {
+    question: "كيف أجد المعلم المناسب؟",
+    answer:
+      "انتقل إلى صفحة المعلمين، ثم استخدم البحث والمرشحات المتاحة للوصول إلى المعلم المناسب للمادة والمرحلة الدراسية.",
+  },
+  {
+    question: "كيف أحجز حصة؟",
+    answer:
+      "افتح صفحة المعلم، وراجع المواعيد المتاحة، ثم اتبع خطوات الحجز المعروضة على المنصة.",
+  },
+  {
+    question: "هل يمكنني متابعة حجوزاتي؟",
+    answer:
+      "سجّل الدخول إلى حسابك واستخدم الصفحات المتاحة لحسابك لمراجعة حجوزاتك وتفاصيلها.",
+  },
+  {
+    question: "كيف ينضم المعلم إلى المنصة؟",
+    answer:
+      "يمكن للمعلم البدء من صفحة التسجيل المخصصة للمعلمين واستكمال البيانات المطلوبة.",
+  },
 ];
-
-const faqAnswers = [
-  "حدد المادة والمرحلة، ثم راجع تخصص المعلم وخبرته وتقييماته وسعر الحصة ومواعيده قبل إرسال طلب الحجز.",
-  "يمكن لولي الأمر متابعة ملفات الأبناء وطلبات الحجز المرتبطة بحسابه، وفق الصلاحيات المتاحة في المنصة.",
-  "اختر المعلم والموعد المتاح، ثم أرسل طلب الحجز وتابع حالته من مساحة حسابك.",
-  "راجع سعر الحصة ومدتها في ملف المعلم قبل الحجز؛ فقد تختلف الأسعار باختلاف المعلم والخدمة.",
-  "تعتمد طرق الدفع المتاحة على إعدادات المنصة ومزود الدفع المفعّل. راجع تعليمات الدفع الظاهرة في حسابك قبل إتمام العملية.",
-  "تعتمد إمكانية الإلغاء والاسترداد على سياسة المنصة وشروط الحجز المعلنة. راجع السياسة قبل تأكيد الحجز.",
-  "يعتمد تسجيل الحصة على إعدادات خدمة الاجتماع وسياسة المنصة؛ لا تفترض أن كل حصة تُسجّل تلقائيًا.",
-  "يمكنك متابعة بيانات الحجز والتفاصيل المتاحة من مساحة الحساب، وتظهر التقارير والواجبات بحسب الخدمات المفعّلة.",
-];
-
-const navLinks = [
-  ["كيف تعمل", "#how"],
-  ["المعلمون", "#teachers"],
-  ["لأولياء الأمور", "#parents"],
-  ["للمعلمين", "#tutors"],
-  ["الأسئلة الشائعة", "#faq"],
-] as const;
-
-// رابط موحد لقائمة المعلمين في الصفحة والجزء السفلي ونتيجة التسجيل.
-const teacherSearchHref = "/teachers";
 
 export default function Home() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [faq, setFaq] = useState<number | null>(0);
-  const [notice, setNotice] = useState("");
-  const [search, setSearch] = useState({
-    grade: "",
-    subject: "",
-    country: "مصر",
-    format: "فردي مباشر",
-    price: "",
-    availability: "",
-  });
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const [onboarding, setOnboarding] = useState(initial);
-  const [step, setStep] = useState(0);
-  const [, setLocation] = useLocation();
-
-  const notify = (text: string) => {
-    setNotice(text);
-    window.setTimeout(() => setNotice(""), 2800);
-  };
-
-  const update = (key: keyof Onboarding, value: string) => {
-    setOnboarding((current) => ({ ...current, [key]: value }));
-  };
-
-  const openOnboarding = () => {
-    setStep(0);
-    setOnboardingOpen(true);
-  };
-
-  useEffect(() => {
-    if (window.location.pathname === "/onboarding") {
-      openOnboarding();
-    }
-  }, []);
-
-  const questions = [
-    ["لمن نبحث عن معلم؟", "role", ["طالب", "ولي أمر"]],
-    ["ما المرحلة الدراسية؟", "stage", ["ابتدائي", "إعدادي", "ثانوي", "جامعي"]],
-    [
-      "ما الصف؟",
-      "grade",
-      ["الصف السادس", "الأول الإعدادي", "الأول الثانوي", "الثالث الثانوي"],
-    ],
-    [
-      "ما المادة؟",
-      "subject",
-      ["رياضيات", "لغة عربية", "لغة إنجليزية", "فيزياء", "كيمياء"],
-    ],
-    [
-      "ما هدفك من التعلم؟",
-      "goal",
-      ["رفع الدرجة", "الاستعداد للاختبار", "فهم الأساسيات", "تنظيم المذاكرة"],
-    ],
-    ["كيف تصف مستواك؟", "level", ["أحتاج تأسيسًا", "متوسط", "متقدم"]],
-    [
-      "ما أكثر ما تحتاجه؟",
-      "needs",
-      ["حل المسائل", "شرح المفاهيم", "خطة مذاكرة", "ثقة قبل الامتحان"],
-    ],
-    [
-      "ما نوع الدروس المفضل؟",
-      "format",
-      ["فردية مباشرة", "مرنة حسب الجدول", "مزيج من الاثنين"],
-    ],
-    ["متى يناسبك التعلم؟", "time", ["بعد الظهر", "المساء", "نهاية الأسبوع"]],
-  ] as const;
-
-  const current = questions[step];
-  const completed = Math.round(
-    (getOnboardingProgress(onboarding, 9) / 100) * 9
-  );
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [searchSubject, setSearchSubject] = useState("");
+  const [searchGrade, setSearchGrade] = useState("");
 
   const findTeachers = () => {
     const params = new URLSearchParams();
 
-    if (search.subject) params.set("subject", search.subject);
-    if (search.grade) params.set("grade", search.grade);
-    if (search.country) params.set("country", search.country);
+    if (searchSubject) params.set("subject", searchSubject);
+    if (searchGrade) params.set("grade", searchGrade);
 
-    if (search.price) {
-      const digits = search.price.replace(/[٠-٩]/g, (digit) =>
-        String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))
-      );
-
-      params.set("price", digits.replace(/\D/g, ""));
-    }
-
-    if (search.availability) {
-      params.set("availability", search.availability);
-    }
-
-    setLocation(
-      `/teachers${params.size ? `?${params.toString()}` : ""}`
-    );
+    window.location.href = `/teachers${params.toString() ? `?${params}` : ""}`;
   };
 
   return (
-    <div
+    <main
       dir="rtl"
-      className="min-h-screen overflow-hidden bg-[#fbf8f4] text-[#182431]"
+      className="min-h-screen overflow-hidden bg-white text-slate-800"
     >
-      {notice && (
-        <div
-          role="status"
-          className="fixed bottom-5 right-5 z-[70] rounded-2xl bg-[#182431] px-5 py-3 text-sm font-semibold text-white shadow-2xl"
-        >
-          {notice}
-        </div>
-      )}
-
-      <header className="sticky top-0 z-40 border-b border-[#182431]/[0.07] bg-[#fbf8f4]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 lg:px-10">
-          <Link
-            href="/"
-            aria-label="مُعلّم - الرئيسية"
-            className="flex items-center gap-2.5"
-          >
-            <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-[#ff7a00] text-white shadow-lg shadow-orange-500/20">
-              <GraduationCap className="h-5 w-5" />
+      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-200">
+              <GraduationCap size={28} />
             </span>
-
-            <span className="leading-none">
-              <b className="block text-[19px] tracking-tight">مُعلّم</b>
-              <span className="mt-1 block text-[9px] font-semibold tracking-[.13em] text-[#182431]/45">
+            <span>
+              <span className="block text-xl font-black tracking-tight text-slate-900">
+                مُعلّم
+              </span>
+              <span className="block text-xs text-slate-500">
                 تعلّم على مقاسك
               </span>
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-[13px] font-semibold text-[#182431]/65 xl:flex">
-            {navLinks.map(([label, href]) => (
-              <a
-                key={href}
-                className="hover:text-[#d86100]"
-                href={href}
-              >
-                {label}
-              </a>
-            ))}
+          <nav className="hidden items-center gap-7 lg:flex">
+            <a href="#how" className="text-sm font-semibold text-slate-600 transition hover:text-indigo-600">
+              كيف تعمل المنصة؟
+            </a>
+            <Link href="/teachers" className="text-sm font-semibold text-slate-600 transition hover:text-indigo-600">
+              المعلمون
+            </Link>
+            <a href="#parents" className="text-sm font-semibold text-slate-600 transition hover:text-indigo-600">
+              لأولياء الأمور
+            </a>
+            <a href="#join" className="text-sm font-semibold text-slate-600 transition hover:text-indigo-600">
+              للمعلمين
+            </a>
+            <a href="#faq" className="text-sm font-semibold text-slate-600 transition hover:text-indigo-600">
+              الأسئلة الشائعة
+            </a>
           </nav>
 
-          <div className="hidden items-center gap-2.5 md:flex">
+          <div className="hidden items-center gap-3 sm:flex">
             <Link
-              href="/auth"
-              className="rounded-full px-4 py-2.5 text-sm font-bold hover:bg-white"
+              href="/login"
+              className="rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
             >
               تسجيل الدخول
             </Link>
-
-            <button
-              onClick={openOnboarding}
-              className="rounded-full bg-[#182431] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#182431]/10 hover:bg-[#273b4e]"
+            <Link
+              href="/register"
+              className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700"
             >
-              سجّل الآن
-              <ArrowLeft className="mr-1 inline h-4 w-4" />
-            </button>
+              ابدأ الآن
+            </Link>
           </div>
 
           <button
-            aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
-            onClick={() => setMenuOpen((open) => !open)}
-            className="rounded-xl p-2 md:hidden"
+            type="button"
+            aria-label={mobileMenuOpen ? "إغلاق القائمة" : "فتح القائمة"}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="rounded-xl border border-slate-200 p-2.5 lg:hidden"
           >
-            {menuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
 
-        {menuOpen && (
-          <div className="space-y-3 border-t border-[#182431]/[0.07] bg-[#fbf8f4] px-5 py-5 md:hidden">
-            {navLinks.map(([label, href]) => (
-              <a
-                key={href}
-                className="block py-1 font-semibold"
-                href={href}
-                onClick={() => setMenuOpen(false)}
-              >
-                {label}
+        {mobileMenuOpen && (
+          <nav className="border-t border-slate-100 bg-white px-5 py-4 lg:hidden">
+            <div className="mx-auto flex max-w-7xl flex-col gap-1">
+              <a onClick={() => setMobileMenuOpen(false)} href="#how" className="rounded-xl px-4 py-3 font-semibold hover:bg-slate-50">
+                كيف تعمل المنصة؟
               </a>
-            ))}
-
-            <Link
-              className="block py-1 font-semibold"
-              href="/auth"
-            >
-              تسجيل الدخول
-            </Link>
-
-            <button
-              onClick={openOnboarding}
-              className="w-full rounded-full bg-[#ff7a00] py-3 font-bold text-white"
-            >
-              سجّل الآن وتواصل مع مستشارك التعليمي
-            </button>
-          </div>
+              <Link onClick={() => setMobileMenuOpen(false)} href="/teachers" className="rounded-xl px-4 py-3 font-semibold hover:bg-slate-50">
+                المعلمون
+              </Link>
+              <a onClick={() => setMobileMenuOpen(false)} href="#parents" className="rounded-xl px-4 py-3 font-semibold hover:bg-slate-50">
+                لأولياء الأمور
+              </a>
+              <a onClick={() => setMobileMenuOpen(false)} href="#join" className="rounded-xl px-4 py-3 font-semibold hover:bg-slate-50">
+                للمعلمين
+              </a>
+              <Link href="/login" className="mt-2 rounded-xl border border-slate-200 px-4 py-3 text-center font-bold">
+                تسجيل الدخول
+              </Link>
+              <Link href="/register" className="rounded-xl bg-indigo-600 px-4 py-3 text-center font-bold text-white">
+                إنشاء حساب
+              </Link>
+            </div>
+          </nav>
         )}
       </header>
 
-      <main>
-        <section className="relative mx-auto max-w-7xl px-5 pb-16 pt-10 lg:px-10 lg:pb-24 lg:pt-16">
-          <div className="pointer-events-none absolute -right-40 top-8 h-80 w-80 rounded-full bg-[#ff7a00]/[0.08] blur-3xl" />
+      <section className="relative isolate bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="pointer-events-none absolute -right-24 top-10 -z-10 h-72 w-72 rounded-full bg-indigo-200/40 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 left-0 -z-10 h-72 w-72 rounded-full bg-cyan-200/40 blur-3xl" />
 
-          <div className="grid items-center gap-10 lg:grid-cols-[1fr_.92fr] lg:gap-14">
-            <div className="relative z-10">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#ff7a00]/20 bg-white/80 px-4 py-2 text-xs font-bold text-[#b85400]">
-                <Sparkles className="h-4 w-4" />
-                مدرسين خصوصيين
-              </div>
-
-              <h1 className="max-w-2xl text-[43px] font-bold leading-[1.2] tracking-[-.04em] sm:text-6xl lg:text-[68px]">
-                رحلتك نحو التفوق
-                <br />
-                <span className="relative inline-block text-[#f27600]">
-                  تبدأ من هنا!
-                  <span className="absolute -bottom-1 right-0 h-2 w-2/3 rounded-full bg-[#ffd7b5]/80" />
-                </span>
-              </h1>
-
-              <p className="mt-6 max-w-xl text-base leading-8 text-[#182431]/65 sm:text-lg">
-                تعلّم على مقاسك مع معلمين مناسبين لاحتياجاتك، واحجز حصصك
-                وتابع تقدمك بخطوات واضحة من مكان واحد.
-              </p>
-
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() =>
-                    document
-                      .getElementById("teacher-search")
-                      ?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                      })
-                  }
-                  className="rounded-full bg-[#ff7a00] px-6 py-3.5 font-bold text-white shadow-lg shadow-orange-500/20 hover:-translate-y-0.5"
-                >
-                  ابحث عن معلم
-                  <ArrowLeft className="mr-2 inline h-4 w-4" />
-                </button>
-
-                <Link
-                  href="/teacher/register"
-                  className="rounded-full border border-[#182431]/15 bg-white/70 px-6 py-3.5 font-bold hover:bg-white"
-                >
-                  انضم كمعلم
-                </Link>
-              </div>
-
-              <div className="mt-8 grid grid-cols-2 gap-3">
-                {[
-                  {
-                    icon: GraduationCap,
-                    title: "تعلّم على مقاسك",
-                    text: "مسار يناسب احتياجات كل طالب",
-                  },
-                  {
-                    icon: CalendarDays,
-                    title: "حصص فردية أونلاين",
-                    text: "مواعيد تناسب جدولك",
-                  },
-                  {
-                    icon: Wallet,
-                    title: "اختيارات تناسب ميزانيتك",
-                    text: "راجع السعر قبل الحجز",
-                  },
-                  {
-                    icon: BookOpen,
-                    title: "من الروضة إلى الجامعة",
-                    text: "مواد ومراحل تعليمية متنوعة",
-                  },
-                ].map(({ icon: Icon, title, text }) => (
-                  <article
-                    key={title}
-                    className="rounded-2xl border border-[#182431]/[0.07] bg-white/80 p-4 transition hover:-translate-y-1 hover:shadow-md"
-                  >
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]">
-                      <Icon className="h-5 w-5" />
-                    </span>
-
-                    <h3 className="mt-3 text-sm font-bold">{title}</h3>
-
-                    <p className="mt-1 text-xs leading-6 text-[#182431]/55">
-                      {text}
-                    </p>
-                  </article>
-                ))}
-              </div>
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:px-8 lg:py-28">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white px-4 py-2 text-sm font-bold text-indigo-700 shadow-sm">
+              <Sparkles size={17} />
+              تعلّم أفضل، بثقة أكبر
             </div>
 
-            <div className="relative mx-auto w-full max-w-[520px]">
-              <div className="absolute -left-4 top-12 z-10 hidden rounded-2xl border border-white/80 bg-white/95 p-3.5 shadow-xl shadow-[#182431]/10 sm:block">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]">
-                    <BadgeCheck className="h-5 w-5" />
-                  </span>
-                  <span>
-                    <b className="block text-xs">تعلّم بثقة</b>
-                    <small className="mt-1 block text-[10px] text-[#182431]/55">
-                      ملفات واضحة ومراجعة
-                    </small>
-                  </span>
-                </div>
-              </div>
+            <h1 className="max-w-2xl text-4xl font-black leading-[1.35] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+              رحلتك نحو
+              <span className="block text-indigo-600">التفوق تبدأ من هنا!</span>
+            </h1>
 
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-[#eee4d8] shadow-[0_25px_70px_-30px_rgba(24,36,49,.35)] sm:aspect-[1.08/1]">
-                <img
-                  src="/manus-storage/moallem-tutor-hero_c772e0b2.jpg"
-                  alt="معلمة تشرح لطالبة خلال جلسة تعلم منزلية"
-                  className="absolute inset-0 h-full w-full object-cover object-center"
-                />
+            <p className="mt-6 max-w-xl text-lg leading-9 text-slate-600">
+              اكتشف معلمك المناسب، واختر المادة والموعد الذي يناسبك، واجعل
+              التعلّم تجربة أقرب إلى أهدافك وطموحاتك.
+            </p>
 
-                <div className="absolute inset-0 bg-gradient-to-t from-[#182431]/70 via-transparent to-transparent" />
-
-                <div className="absolute right-5 top-5 rounded-full border border-white/30 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-[#182431]">
-                  مصر · حصص أونلاين
-                </div>
-
-                <div className="absolute bottom-5 right-5 left-5 flex items-end justify-between gap-3 text-white">
-                  <div>
-                    <span className="text-xs text-white/75">
-                      تعلّم خطوة بخطوة
-                    </span>
-                    <h2 className="mt-1 text-xl font-bold sm:text-2xl">
-                      كل حصة تقرّبك لهدفك
-                    </h2>
-                  </div>
-
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#ff7a00] shadow-lg">
-                    <BookOpen className="h-5 w-5" />
-                  </span>
-                </div>
-              </div>
-
-              <div className="absolute -bottom-5 -right-3 hidden rounded-2xl border border-white/70 bg-white px-4 py-3 shadow-xl sm:block">
-                <div className="flex items-center gap-2 text-xs font-bold">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-[#fff0e2] text-[#b85a08]">
-                    <ShieldCheck className="h-4 w-4" />
-                  </span>
-                  <span>اختيار مبني على احتياجك</span>
-                </div>
-                <p className="mt-1 text-[10px] text-[#182431]/50">
-                  تفاصيل واضحة تساعدك على اتخاذ قرار مناسب
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            id="teacher-search"
-            className="relative z-20 mt-14 rounded-[1.75rem] border border-white bg-white p-4 shadow-[0_20px_55px_-35px_rgba(24,36,49,.38)] sm:p-5 lg:mt-20"
-          >
-            <div className="mb-4 flex items-center gap-2 px-1">
-              <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]">
-                <Search className="h-4 w-4" />
-              </span>
-              <div>
-                <b className="block text-sm">ابدأ البحث عن معلم</b>
-                <span className="text-[11px] text-[#182431]/50">
-                  اختر ما يناسبك — ويمكنك تعديل التصفية لاحقًا
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              <SearchSelect
-                label="المرحلة"
-                value={search.grade}
-                onChange={(grade) => setSearch((s) => ({ ...s, grade }))}
-                options={["ابتدائي", "إعدادي", "ثانوي", "جامعي"]}
-                placeholder="كل المراحل"
-              />
-
-              <SearchSelect
-                label="المادة"
-                value={search.subject}
-                onChange={(subject) => setSearch((s) => ({ ...s, subject }))}
-                options={[
-                  "رياضيات",
-                  "لغة عربية",
-                  "لغة إنجليزية",
-                  "فيزياء",
-                  "كيمياء",
-                  "علوم",
-                  "برمجة",
-                  "تكنولوجيا المعلومات",
-                  "علوم الحاسب",
-                ]}
-                placeholder="اختر المادة"
-              />
-
-              <SearchSelect
-                label="الدولة"
-                value={search.country}
-                onChange={(country) => setSearch((s) => ({ ...s, country }))}
-                options={["مصر", "السعودية", "الإمارات", "الكويت", "الأردن"]}
-                placeholder="اختر الدولة"
-              />
-
-              <SearchSelect
-                label="نوع الدرس"
-                value={search.format}
-                onChange={(format) => setSearch((s) => ({ ...s, format }))}
-                options={["فردي مباشر", "تجربة تعريفية", "مراجعة اختبار"]}
-                placeholder="كل الأنواع"
-              />
-
-              <SearchSelect
-                label="السعر"
-                value={search.price}
-                onChange={(price) => setSearch((s) => ({ ...s, price }))}
-                options={["حتى ٣٠٠ ج.م", "حتى ٥٠٠ ج.م", "حتى ٧٠٠ ج.م"]}
-                placeholder="كل الأسعار"
-              />
-
-              <SearchSelect
-                label="التوفر"
-                value={search.availability}
-                onChange={(availability) =>
-                  setSearch((s) => ({ ...s, availability }))
-                }
-                options={["اليوم", "المساء", "نهاية الأسبوع"]}
-                placeholder="أي وقت"
-              />
-
-              <button
-                onClick={findTeachers}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-[#ff7a00] px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-orange-500/15 hover:bg-[#e96e00]"
-              >
-                <Search className="h-4 w-4" />
-                ابحث الآن
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-y border-[#182431]/[0.06] bg-white py-5">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-5 text-xs font-semibold text-[#182431]/55 lg:justify-between lg:px-10">
-            <span className="inline-flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-[#f27600]" />
-              معلمون يخضعون للمراجعة
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-[#f27600]" />
-              احجز في الوقت المناسب
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <Languages className="h-4 w-4 text-[#f27600]" />
-              تجربة عربية من البداية
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <Users className="h-4 w-4 text-[#f27600]" />
-              متابعة للأسرة والطالب
-            </span>
-          </div>
-        </section>
-
-        <section
-          id="how"
-          className="mx-auto max-w-7xl px-5 py-20 lg:px-10 lg:py-24"
-        >
-          <SectionHeading
-            eyebrow="بكل بساطة"
-            title={
-              <>
-                من البحث إلى أول إنجاز،
-                <br className="hidden sm:block" /> نرتبها معك.
-              </>
-            }
-            copy="خطوات واضحة تساعدك تختار، تحجز، وتتابع التقدم دون تعقيد."
-          />
-
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              [Search, "١", "ابحث بذكاء", "اختر المادة والمرحلة، ثم قارن الملفات والأسعار."],
-              [ShieldCheck, "٢", "اختر بثقة", "اطلع على خبرة المعلم وطريقته والمواعيد المتاحة."],
-              [CalendarDays, "٣", "احجز موعدك", "أرسل طلب الدرس في الوقت الذي يناسبك."],
-              [BookOpen, "٤", "تابع تقدمك", "احتفظ بملخص الدرس والخطوة القادمة للتعلم."],
-            ].map(([Icon, number, title, copy]) => {
-              const StepIcon = Icon as typeof Search;
-
-              return (
-                <article
-                  key={String(number)}
-                  className="group rounded-[1.5rem] bg-[#f4efe9] p-5 transition hover:-translate-y-1 hover:bg-[#fff0e2]"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#df6900] shadow-sm">
-                      <StepIcon className="h-5 w-5" />
-                    </span>
-                    <span className="text-xs font-bold text-[#182431]/25">
-                      {String(number)}
-                    </span>
-                  </div>
-                  <h3 className="mt-7 text-lg font-bold">{String(title)}</h3>
-                  <p className="mt-2 text-sm leading-6 text-[#182431]/58">
-                    {String(copy)}
-                  </p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <section id="teachers" className="bg-[#f2ece5] py-20 lg:py-24">
-          <div className="mx-auto max-w-7xl px-5 lg:px-10">
-            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-              <SectionHeading
-                eyebrow="اختيار المعلم المناسب"
-                title={
-                  <>
-                    ابدأ من احتياجك،
-                    <br className="hidden sm:block" /> ثم اختر بثقة.
-                  </>
-                }
-                copy="استكشف ملفات المعلمين المتاحة، وقارن التخصصات والمواعيد والتكلفة قبل إرسال طلبك."
-              />
-
+            <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href={teacherSearchHref}
-                className="mb-1 inline-flex shrink-0 items-center gap-2 text-sm font-bold text-[#c35a00]"
+                href="/teachers"
+                className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-6 py-4 font-bold text-white shadow-xl shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700"
               >
-                استكشف المعلمين
-                <ArrowLeft className="h-4 w-4" />
+                اكتشف المعلمين
+                <ArrowLeft size={19} />
+              </Link>
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 font-bold text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
+              >
+                انضم إلى مُعلّم
               </Link>
             </div>
 
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {[
-                {
-                  icon: BookOpen,
-                  title: "حسب المادة والمرحلة",
-                  text: "حدّد ما تريد دراسته لتصل إلى الخيارات الأقرب لاحتياجك.",
-                },
-                {
-                  icon: CalendarDays,
-                  title: "حسب الموعد المناسب",
-                  text: "راجع تفاصيل التوفر قبل إرسال طلب الحجز.",
-                },
-                {
-                  icon: Wallet,
-                  title: "بتكلفة واضحة",
-                  text: "راجع سعر الحصة ومدتها قبل اتخاذ قرارك.",
-                },
-              ].map(({ icon: Icon, title, text }) => (
-                <article
-                  key={title}
-                  className="rounded-[1.5rem] border border-[#182431]/[0.07] bg-white p-6 shadow-sm"
-                >
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff0e2] text-[#c35a00]">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-5 font-bold">{title}</h3>
-                  <p className="mt-2 text-sm leading-7 text-[#182431]/60">
-                    {text}
-                  </p>
-                  <Link
-                    href={teacherSearchHref}
-                    className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#c35a00]"
-                  >
-                    عرض المعلمين
-                    <ArrowLeft className="h-4 w-4" />
-                  </Link>
-                </article>
-              ))}
+            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-slate-600">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-emerald-600" />
+                ابحث بسهولة
+              </span>
+              <span className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-emerald-600" />
+                اختر موعدك
+              </span>
+              <span className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-emerald-600" />
+                تعلّم من أي مكان
+              </span>
             </div>
           </div>
-        </section>
 
-        <section
-          id="parents"
-          className="mx-auto grid max-w-7xl gap-10 px-5 py-20 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:px-10 lg:py-24"
-        >
-          <div>
-            <p className="mb-4 text-sm font-bold text-[#c35a00]">
-              للطلاب وأولياء الأمور
-            </p>
-            <h2 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-              تعلّم أوضح.
-              <br />
-              وطمأنينة أكبر.
-            </h2>
-            <p className="mt-5 max-w-lg leading-8 text-[#182431]/60">
-              ملف لكل طالب، ومتابعة للحصص القادمة والتقارير والواجبات — حتى
-              تعرف الأسرة ما تم وما الخطوة التالية.
-            </p>
-            <button
-              onClick={openOnboarding}
-              className="mt-7 rounded-full bg-[#182431] px-6 py-3.5 text-sm font-bold text-white"
-            >
-              ابنِ ملف تعلمك
-              <ArrowLeft className="mr-1 inline h-4 w-4" />
-            </button>
+          <div className="relative mx-auto w-full max-w-xl">
+            <div className="absolute -left-4 top-8 h-28 w-28 rounded-3xl bg-cyan-200/60 rotate-12" />
+            <div className="absolute -right-4 bottom-10 h-24 w-24 rounded-full bg-indigo-200/70" />
+
+            <div className="relative rounded-[2rem] border border-white bg-white p-5 shadow-2xl shadow-indigo-200/50 sm:p-8">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-500">
+                    ابدأ رحلة التعلّم
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black text-slate-900">
+                    من أين نبدأ؟
+                  </h2>
+                </div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                  <BookOpen size={25} />
+                </span>
+              </div>
+
+              <div className="mt-7 space-y-5">
+                <div>
+                  <label htmlFor="home-subject" className="mb-2 block text-sm font-bold text-slate-700">
+                    المادة الدراسية
+                  </label>
+                  <select
+                    id="home-subject"
+                    value={searchSubject}
+                    onChange={(event) => setSearchSubject(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                  >
+                    <option value="">جميع المواد</option>
+                    {subjects.map((subject) => (
+                      <option key={subject} value={subject}>
+                        {subject}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="home-grade" className="mb-2 block text-sm font-bold text-slate-700">
+                    المرحلة الدراسية
+                  </label>
+                  <select
+                    id="home-grade"
+                    value={searchGrade}
+                    onChange={(event) => setSearchGrade(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                  >
+                    <option value="">جميع المراحل</option>
+                    <option value="ابتدائي">المرحلة الابتدائية</option>
+                    <option value="إعدادي">المرحلة الإعدادية</option>
+                    <option value="ثانوي">المرحلة الثانوية</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={findTeachers}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl bg-indigo-600 px-5 py-4 font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700"
+                >
+                  <Search size={20} />
+                  ابحث عن معلم
+                  <ArrowLeft size={18} />
+                </button>
+              </div>
+
+              <div className="mt-5 flex items-center gap-3 rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">
+                <ShieldCheck className="shrink-0" size={22} />
+                <span>اختر ما يناسبك، ثم راجع تفاصيل المعلم ومواعيده المتاحة.</span>
+              </div>
+            </div>
           </div>
+        </div>
+      </section>
 
-          <div className="rounded-[1.75rem] bg-[#182431] p-6 text-white shadow-xl shadow-[#182431]/15 sm:p-8">
-            <div className="flex items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#ff7a00]">
-                <GraduationCap className="h-6 w-6" />
+      <section className="border-y border-slate-100 bg-white">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-5 px-4 py-8 sm:px-6 md:grid-cols-4 lg:px-8">
+          {[
+            { icon: BookOpen, title: "مواد متنوعة", subtitle: "لمراحل دراسية مختلفة" },
+            { icon: CalendarDays, title: "حجز منظم", subtitle: "وفق المواعيد المتاحة" },
+            { icon: Video, title: "تعلّم عن بُعد", subtitle: "من المكان المناسب لك" },
+            { icon: Wallet, title: "تفاصيل واضحة", subtitle: "راجع بيانات الحصة قبلها" },
+          ].map((item) => (
+            <div key={item.title} className="flex items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <item.icon size={23} />
               </span>
               <div>
-                <span className="text-xs font-semibold text-white/55">
-                  مساحة تعلمك
+                <p className="font-extrabold text-slate-900">{item.title}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{item.subtitle}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="how" className="scroll-mt-24 bg-slate-50 py-20 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="text-sm font-extrabold text-indigo-600">كيف تعمل مُعلّم؟</span>
+            <h2 className="mt-3 text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
+              ثلاث خطوات نحو تجربة تعليمية أفضل
+            </h2>
+            <p className="mt-4 leading-8 text-slate-600">
+              خطوات بسيطة تساعدك على الوصول إلى المعلم المناسب والبدء في التعلّم.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {steps.map((step) => (
+              <article
+                key={step.number}
+                className="group rounded-3xl border border-slate-100 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-100/60"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 transition group-hover:bg-indigo-600 group-hover:text-white">
+                    <step.icon size={27} />
+                  </span>
+                  <span className="text-4xl font-black text-slate-100">{step.number}</span>
+                </div>
+                <h3 className="mt-6 text-xl font-extrabold text-slate-900">{step.title}</h3>
+                <p className="mt-3 leading-8 text-slate-600">{step.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+            <div>
+              <span className="text-sm font-extrabold text-indigo-600">تعلّم بالطريقة التي تناسبك</span>
+              <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
+                اكتشف المواد التي تحتاجها
+              </h2>
+              <p className="mt-3 max-w-2xl leading-8 text-slate-600">
+                ابدأ من المادة الدراسية، ثم استخدم صفحة المعلمين للوصول إلى الخيارات المتاحة.
+              </p>
+            </div>
+            <Link href="/teachers" className="inline-flex shrink-0 items-center gap-2 font-bold text-indigo-600 hover:text-indigo-800">
+              عرض المعلمين
+              <ArrowLeft size={18} />
+            </Link>
+          </div>
+
+          <div className="mt-9 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {subjects.map((subject, index) => (
+              <Link
+                key={subject}
+                href={`/teachers?${new URLSearchParams({ subject })}`}
+                className="group flex min-h-36 flex-col justify-between rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100/50"
+              >
+                <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${index % 2 === 0 ? "bg-indigo-50 text-indigo-600" : "bg-cyan-50 text-cyan-700"}`}>
+                  <BookOpen size={22} />
                 </span>
-                <h3 className="mt-1 text-xl font-bold">
-                  كل ما تحتاجه في مكان واحد
-                </h3>
+                <span className="mt-5 flex items-center justify-between gap-2 font-extrabold text-slate-800">
+                  {subject}
+                  <ArrowLeft size={17} className="text-slate-300 transition group-hover:-translate-x-1 group-hover:text-indigo-600" />
+                </span>
+              </Link>
+            ))}
+            <Link
+              href="/teachers"
+              className="flex min-h-36 flex-col items-center justify-center rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/50 p-5 text-center transition hover:bg-indigo-50"
+            >
+              <Search size={27} className="text-indigo-600" />
+              <span className="mt-3 font-extrabold text-indigo-800">استكشف المزيد</span>
+              <span className="mt-1 text-sm text-slate-500">كل المعلمين المتاحين</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section id="parents" className="scroll-mt-24 bg-indigo-950 py-20 text-white sm:py-24">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-indigo-100">
+              <HeartHandshake size={17} />
+              لأولياء الأمور
+            </span>
+            <h2 className="mt-6 text-3xl font-black leading-relaxed sm:text-4xl">
+              شارك في رحلة ابنك التعليمية بثقة
+            </h2>
+            <p className="mt-5 max-w-xl leading-9 text-indigo-100/80">
+              ابدأ باختيار المادة والمعلم المناسبين، وراجع بيانات الحجز وتفاصيله من خلال حسابك على المنصة.
+            </p>
+            <div className="mt-7 space-y-4">
+              {[
+                "البحث عن المعلم حسب المادة والمرحلة",
+                "مراجعة بيانات الحصص ومواعيدها",
+                "الوصول إلى المعلومات المتاحة داخل الحساب",
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3">
+                  <CheckCircle2 size={21} className="mt-1 shrink-0 text-cyan-300" />
+                  <span className="leading-7 text-indigo-50">{item}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Link href="/teachers" className="rounded-xl bg-white px-6 py-3.5 font-bold text-indigo-950 transition hover:bg-indigo-50">
+                ابحث عن معلم
+              </Link>
+              <Link href="/register" className="rounded-xl border border-white/25 px-6 py-3.5 font-bold text-white transition hover:bg-white/10">
+                إنشاء حساب
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-cyan-200">
+                <GraduationCap size={26} />
+              </span>
+              <h3 className="mt-6 text-xl font-extrabold">اختيار واعٍ</h3>
+              <p className="mt-3 text-sm leading-7 text-indigo-100/75">
+                قارن المعلومات المتاحة عن المعلمين قبل اتخاذ قرار الحجز.
+              </p>
+            </div>
+            <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-cyan-200">
+                <CalendarDays size={26} />
+              </span>
+              <h3 className="mt-6 text-xl font-extrabold">تنظيم الوقت</h3>
+              <p className="mt-3 text-sm leading-7 text-indigo-100/75">
+                اختر المواعيد المتاحة التي تتناسب مع جدول الطالب.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-cyan-200">
+                <MessageCircle size={26} />
+              </span>
+              <h3 className="mt-6 text-xl font-extrabold">تواصل أوضح</h3>
+              <p className="mt-3 text-sm leading-7 text-indigo-100/75">
+                تابع المعلومات والإرشادات المتاحة لك عبر المنصة.
+              </p>
+            </div>
+            <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-cyan-200">
+                <ShieldCheck size={26} />
+              </span>
+              <h3 className="mt-6 text-xl font-extrabold">وضوح التفاصيل</h3>
+              <p className="mt-3 text-sm leading-7 text-indigo-100/75">
+                راجع تفاصيل الحجز وشروطه قبل إتمام الخطوات المطلوبة.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="text-sm font-extrabold text-indigo-600">لماذا مُعلّم؟</span>
+            <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
+              تجربة تعليمية تبدأ باحتياجاتك
+            </h2>
+          </div>
+
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {benefits.map((benefit) => (
+              <article key={benefit.title} className="rounded-2xl border border-slate-100 p-6 transition hover:border-indigo-100 hover:bg-indigo-50/40">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                  <benefit.icon size={25} />
+                </span>
+                <h3 className="mt-5 text-lg font-extrabold text-slate-900">{benefit.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600">{benefit.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="join" className="scroll-mt-24 bg-slate-50 py-20 sm:py-24">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="overflow-hidden rounded-[2rem] bg-gradient-to-l from-indigo-700 to-indigo-600 p-8 text-white shadow-xl shadow-indigo-200 sm:p-12 lg:p-14">
+            <div className="grid items-center gap-8 md:grid-cols-[1fr_auto]">
+              <div>
+                <span className="inline-flex items-center gap-2 text-sm font-bold text-indigo-100">
+                  <Star size={17} />
+                  للمعلمين
+                </span>
+                <h2 className="mt-4 text-3xl font-black leading-relaxed sm:text-4xl">
+                  شارك خبرتك، ووسّع فرصك التعليمية
+                </h2>
+                <p className="mt-4 max-w-2xl leading-8 text-indigo-100">
+                  أنشئ حسابك كمعلم، واستكمل بياناتك وتخصصاتك ومواعيدك وفق خطوات التسجيل المتاحة.
+                </p>
+              </div>
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-4 font-extrabold text-indigo-700 transition hover:bg-indigo-50"
+              >
+                انضم كمعلم
+                <ArrowLeft size={18} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" className="scroll-mt-24 py-20 sm:py-24">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <div className="text-center">
+            <span className="text-sm font-extrabold text-indigo-600">هل لديك سؤال؟</span>
+            <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
+              الأسئلة الشائعة
+            </h2>
+          </div>
+
+          <div className="mt-10 space-y-3">
+            {faqs.map((faq, index) => (
+              <article key={faq.question} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <button
+                  type="button"
+                  aria-expanded={openFaq === index}
+                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                  className="flex w-full items-center justify-between gap-4 px-5 py-5 text-right font-extrabold text-slate-900 sm:px-6"
+                >
+                  <span>{faq.question}</span>
+                  <ChevronDown
+                    size={20}
+                    className={`shrink-0 text-indigo-600 transition-transform ${openFaq === index ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {openFaq === index && (
+                  <div className="border-t border-slate-100 px-5 py-5 leading-8 text-slate-600 sm:px-6">
+                    {faq.answer}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="bg-slate-950 text-white">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2">
+              <Link href="/" className="inline-flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500">
+                  <GraduationCap size={25} />
+                </span>
+                <span className="text-xl font-black">مُعلّم</span>
+              </Link>
+              <p className="mt-4 max-w-md leading-8 text-slate-400">
+                منصة تساعد الطلاب وأولياء الأمور على البحث عن المعلمين وتنظيم تجربة التعلّم.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-extrabold">روابط مهمة</h3>
+              <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
+                <Link href="/teachers" className="transition hover:text-white">المعلمون</Link>
+                <Link href="/login" className="transition hover:text-white">تسجيل الدخول</Link>
+                <Link href="/register" className="transition hover:text-white">إنشاء حساب</Link>
               </div>
             </div>
 
-            <div className="mt-7 space-y-4">
-              {[
-                {
-                  icon: CalendarDays,
-                  title: "الحصص والمواعيد",
-                  text: "تابع طلبات الحجز ومواعيد دروسك.",
-                },
-                {
-                  icon: BookOpen,
-                  title: "ملف التعلم",
-                  text: "احتفظ بأهدافك والمواد التي تتابعها.",
-                },
-                {
-                  icon: MessageCircle,
-                  title: "التواصل والمتابعة",
-                  text: "تابع تفاصيل الطلب والخطوة التالية.",
-                },
-              ].map(({ icon: Icon, title, text }) => (
-                <div
-                  key={title}
-                  className="flex items-start gap-3 rounded-2xl bg-white/[0.07] p-4"
-                >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-[#ffb36e]">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <b className="block text-sm">{title}</b>
-                    <p className="mt-1 text-xs leading-6 text-white/60">
-                      {text}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Link
-              href="/portal"
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#ff7a00] px-5 py-3 text-sm font-bold text-white"
-            >
-              افتح مساحة حسابك
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </div>
-        </section>
-
-        <section id="tutors" className="bg-[#fff0e2] py-16 sm:py-20">
-          <div className="mx-auto grid max-w-7xl gap-7 px-5 lg:grid-cols-[1fr_auto] lg:items-center lg:px-10">
             <div>
-              <p className="text-sm font-bold text-[#a84c00]">للمعلمين</p>
-              <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
-                علّم بطريقتك، ووسّع أثرك.
-              </h2>
-              <p className="mt-3 max-w-2xl leading-7 text-[#182431]/65">
-                أنشئ ملفك، أضف المواد والمراحل التي تدرّسها، وحدد أوقاتك
-                المناسبة. طلبات الانضمام تخضع للمراجعة قبل الظهور في السوق.
+              <h3 className="font-extrabold">ابدأ رحلتك</h3>
+              <p className="mt-4 text-sm leading-7 text-slate-400">
+                اختر المادة والمرحلة، ثم اكتشف الخيارات المتاحة لك.
               </p>
-            </div>
-
-            <Link
-              href="/teacher/register"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff7a00] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/15"
-            >
-              قدّم كمعلم
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-5 py-20 lg:px-10">
-          <SectionHeading
-            eyebrow="الوضوح من البداية"
-            title="تفاصيل واضحة قبل الحجز"
-            copy="راجع سعر الحصة ومدتها وشروط الحجز الظاهرة في ملف المعلم قبل إرسال الطلب."
-          />
-
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <PriceInfo
-              icon={Wallet}
-              title="سعر ظاهر"
-              text="يعرض ملف المعلم سعر الحصة ومدتها قبل أن تبدأ طلب الحجز."
-            />
-            <PriceInfo
-              icon={CalendarDays}
-              title="موعد يناسبك"
-              text="تعرّف على المواعيد المتاحة، ثم أرسل طلبك لمراجعة التوفر."
-            />
-            <PriceInfo
-              icon={ShieldCheck}
-              title="تفاصيل واضحة"
-              text="راجع شروط الحجز وطرق الدفع والسياسات المعلنة قبل تأكيد الطلب."
-            />
-          </div>
-        </section>
-
-        <section
-          id="faq"
-          className="border-y border-[#182431]/[0.06] bg-white py-20"
-        >
-          <div className="mx-auto max-w-3xl px-5">
-            <div className="text-center">
-              <p className="mb-3 text-sm font-bold text-[#c35a00]">
-                الأسئلة الشائعة
-              </p>
-              <h2 className="text-3xl font-bold sm:text-4xl">
-                كل ما تحتاج معرفته
-              </h2>
-            </div>
-
-            <div className="mt-9 space-y-3">
-              {faqs.map((question, index) => (
-                <div
-                  key={question}
-                  className="rounded-2xl bg-[#fbf8f4] px-5"
-                >
-                  <button
-                    className="flex w-full items-center justify-between gap-4 py-5 text-right font-bold"
-                    onClick={() =>
-                      setFaq(faq === index ? null : index)
-                    }
-                    aria-expanded={faq === index}
-                  >
-                    {question}
-                    <ChevronDown
-                      className={`h-5 w-5 shrink-0 transition-transform ${
-                        faq === index ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {faq === index && (
-                    <p className="pb-5 text-sm leading-7 text-[#182431]/60">
-                      {faqAnswers[index]}
-                    </p>
-                  )}
-                </div>
-              ))}
+              <Link href="/teachers" className="mt-4 inline-flex items-center gap-2 font-bold text-indigo-300 transition hover:text-white">
+                ابحث عن معلم
+                <ArrowLeft size={17} />
+              </Link>
             </div>
           </div>
-        </section>
-      </main>
 
-      <footer className="bg-[#182431] px-5 py-12 text-white lg:px-10">
-        <div className="mx-auto grid max-w-7xl gap-9 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#ff7a00]">
-                <GraduationCap className="h-5 w-5" />
-              </span>
-              <b className="text-lg">مُعلّم</b>
-            </div>
-
-            <p className="mt-4 max-w-xs text-sm leading-7 text-white/55">
-              اختر معلمك، احجز موعدك، وابدأ رحلة تعلم مصممة لك.
-            </p>
-
-            <p className="mt-4 text-[10px] text-white/35">
-              منصة مُعلّم التعليمية · مصر · © ٢٠٢٦
-            </p>
-          </div>
-
-          <FooterGroup
-            title="اكتشف"
-            links={[
-              ["المعلمون", "/teachers"],
-              ["كيف تعمل", "#how"],
-              ["الأسئلة الشائعة", "#faq"],
-            ]}
-          />
-
-          <FooterGroup
-            title="مجتمع مُعلّم"
-            links={[
-              ["للطلاب", "#parents"],
-              ["لأولياء الأمور", "#parents"],
-              ["للمعلمين", "/teacher/register"],
-            ]}
-          />
-
-          <div>
-            <b className="text-sm">تواصل معنا</b>
-            <p className="mt-4 flex items-center gap-2 text-sm text-white/55">
-              <MessageCircle className="h-4 w-4" />
-              لخدمة العملاء والاستفسارات
-            </p>
-
-            <div className="mt-3 flex flex-wrap gap-4 text-xs text-white/40">
-              <Link href="/auth">حسابك</Link>
-              <Link href={teacherSearchHref}>المعلمون</Link>
-            </div>
+          <div className="mt-10 border-t border-white/10 pt-6 text-center text-sm text-slate-500">
+            © {new Date().getFullYear()} مُعلّم — تعلّم على مقاسك
           </div>
         </div>
       </footer>
-
-      {onboardingOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#182431]/60 p-4 backdrop-blur-sm">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="onboarding-title"
-            className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-[1.75rem] bg-[#fbf8f4] p-6 shadow-2xl sm:p-8"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-xs font-bold text-[#c35a00]">
-                  خطوة {Math.min(step + 1, 9)} من ٩ · ملف تعلّم مبدئي
-                </span>
-                <h2 id="onboarding-title" className="mt-2 text-2xl font-bold">
-                  {step < 9
-                    ? "لنجد نقطة البداية المناسبة لك"
-                    : "هذه بداية ملف تعلمك"}
-                </h2>
-              </div>
-
-              <button
-                aria-label="إغلاق"
-                onClick={() => setOnboardingOpen(false)}
-                className="rounded-xl p-2 hover:bg-white"
-              >
-                <X />
-              </button>
-            </div>
-
-            <div className="mt-5 h-2 rounded-full bg-[#182431]/10">
-              <div
-                className="h-2 rounded-full bg-[#ff7a00] transition-all"
-                style={{
-                  width: `${Math.min(100, (step / 9) * 100)}%`,
-                }}
-              />
-            </div>
-
-            {step < 9 ? (
-              <>
-                <p className="mt-8 text-xl font-bold">{current[0]}</p>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {current[2].map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => {
-                        update(current[1] as keyof Onboarding, option);
-                        setStep((value) => value + 1);
-                      }}
-                      className="rounded-2xl border border-[#182431]/10 bg-white p-4 text-right font-semibold transition hover:-translate-y-0.5 hover:border-[#ff7a00] hover:bg-[#fff4e9]"
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-8 flex justify-between">
-                  <button
-                    disabled={step === 0}
-                    onClick={() => setStep((value) => value - 1)}
-                    className="rounded-full border border-[#182431]/15 px-5 py-2 text-sm font-bold disabled:opacity-30"
-                  >
-                    السابق
-                  </button>
-
-                  <span className="self-center text-xs text-[#182431]/45">
-                    يمكنك العودة لتغيير إجاباتك
-                  </span>
-                </div>
-              </>
-            ) : (
-              <OnboardingResult
-                data={onboarding}
-                onClose={() => setOnboardingOpen(false)}
-              />
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SearchSelect({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-  placeholder: string;
-}) {
-  return (
-    <label className="block rounded-2xl bg-[#f7f3ee] px-3.5 py-2.5">
-      <span className="block text-[10px] font-bold text-[#182431]/45">
-        {label}
-      </span>
-
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 w-full appearance-none bg-transparent text-sm font-semibold outline-none"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function SectionHeading({
-  eyebrow,
-  title,
-  copy,
-}: {
-  eyebrow: string;
-  title: React.ReactNode;
-  copy: string;
-}) {
-  return (
-    <div>
-      <p className="mb-3 text-sm font-bold text-[#c35a00]">{eyebrow}</p>
-      <h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
-        {title}
-      </h2>
-      <p className="mt-3 max-w-xl text-sm leading-7 text-[#182431]/55">
-        {copy}
-      </p>
-    </div>
-  );
-}
-
-function PriceInfo({
-  icon: Icon,
-  title,
-  text,
-}: {
-  icon: typeof Wallet;
-  title: string;
-  text: string;
-}) {
-  return (
-    <article className="rounded-2xl border border-[#182431]/[0.08] bg-white p-5">
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff0e2] text-[#d86100]">
-        <Icon className="h-5 w-5" />
-      </span>
-      <h3 className="mt-4 font-bold">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[#182431]/55">{text}</p>
-    </article>
-  );
-}
-
-function FooterGroup({
-  title,
-  links,
-}: {
-  title: string;
-  links: [string, string][];
-}) {
-  return (
-    <div>
-      <b className="text-sm">{title}</b>
-      <div className="mt-4 space-y-3">
-        {links.map(([label, href]) => (
-          <a
-            key={href + label}
-            href={href}
-            className="block text-sm text-white/55 hover:text-white"
-          >
-            {label}
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function OnboardingResult({
-  data,
-  onClose,
-}: {
-  data: Onboarding;
-  onClose: () => void;
-}) {
-  const me = trpc.auth.me.useQuery();
-  const save = trpc.student.learningProfile.save.useMutation();
-  const savedPayload = useRef<string | null>(null);
-  const payload = JSON.stringify(data);
-
-  useEffect(() => {
-    if (me.data && savedPayload.current !== payload) {
-      savedPayload.current = payload;
-      save.mutate({ ...data, answers: data });
-    }
-  }, [data, me.data, payload, save.mutate]);
-
-  const recommendations = useMemo(() => {
-    if (data.subject === "فيزياء") return teachers.slice(1, 2);
-    if (data.subject === "لغة إنجليزية") return teachers.slice(2, 3);
-    return teachers.slice(0, 2);
-  }, [data.subject]);
-
-  return (
-    <div className="mt-8">
-      <div className="rounded-2xl bg-[#fff0e2] p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#ff7a00] text-white">
-            <Check />
-          </span>
-          <div>
-            <b>تم تسجيل تفضيلاتك</b>
-            <p className="mt-1 text-sm leading-6 text-[#182431]/60">
-              {!me.data
-                ? "سجّل الدخول لحفظ تفضيلاتك ومتابعتها من حسابك."
-                : save.isSuccess
-                  ? "حُفظت تفضيلات التعلم في حسابك."
-                  : save.isError
-                    ? "تعذّر حفظ التفضيلات. يمكنك متابعة استكشاف المعلمين."
-                    : "جارٍ حفظ تفضيلات التعلم…"}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {[
-            data.role,
-            data.stage,
-            data.grade,
-            data.subject,
-            data.goal,
-            data.time,
-          ]
-            .filter(Boolean)
-            .map((item) => (
-              <span
-                key={item}
-                className="rounded-full bg-white px-3 py-1 text-xs font-semibold"
-              >
-                {item}
-              </span>
-            ))}
-        </div>
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-[#182431]/10 bg-white p-5">
-        <h3 className="font-bold">الخطوة التالية</h3>
-        <p className="mt-2 text-sm leading-7 text-[#182431]/60">
-          انتقل إلى قائمة المعلمين المتاحة، وراجع التفاصيل قبل إرسال طلب الحجز.
-        </p>
-
-        {recommendations.length > 0 && (
-          <div className="mt-4 space-y-2">
-            {recommendations.map((teacher) => (
-              <div
-                key={teacher.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-[#fbf8f4] p-3"
-              >
-                <div>
-                  <b className="text-sm">{teacher.name}</b>
-                  <p className="mt-1 text-xs text-[#182431]/55">
-                    {teacher.subject} · {teacher.stage}
-                  </p>
-                </div>
-                <span className="text-xs font-bold text-[#c35a00]">
-                  {teacher.rating} ★
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Link
-            href={teacherSearchHref}
-            onClick={onClose}
-            className="rounded-full bg-[#ff7a00] px-5 py-3 text-center text-sm font-bold text-white"
-          >
-            استكشف المعلمين
-          </Link>
-
-          <button
-            onClick={onClose}
-            className="rounded-full border border-[#182431]/15 px-5 py-3 text-sm font-bold"
-          >
-            إغلاق
-          </button>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 }
