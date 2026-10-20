@@ -528,4 +528,3 @@ function Info({ label, value }: { label: string; value: any }) {
     </div>
   );
 }
-
