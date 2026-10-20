@@ -1,4 +1,4 @@
-```tsx
+
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { GraduationCap, LogOut, Search, ShieldCheck } from "lucide-react";
@@ -528,4 +528,4 @@ function Info({ label, value }: { label: string; value: any }) {
     </div>
   );
 }
-```
+
