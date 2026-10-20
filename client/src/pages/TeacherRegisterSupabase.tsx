@@ -1,4 +1,4 @@
-```tsx
+
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { CheckCircle2, GraduationCap, Send, ShieldCheck } from "lucide-react";
@@ -633,4 +633,4 @@ export default function TeacherRegisterSupabase() {
     </main>
   );
 }
-```
+
