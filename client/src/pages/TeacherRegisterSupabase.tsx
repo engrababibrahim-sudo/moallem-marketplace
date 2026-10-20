@@ -4,6 +4,7 @@ import { Link, useLocation } from "wouter";
 import { CheckCircle2, GraduationCap, Send, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import TeacherVerificationUploads from "./TeacherVerificationUploads";
 
 const countries = [
   "مصر", "السعودية", "الإمارات", "الكويت", "قطر", "البحرين", "عُمان",
