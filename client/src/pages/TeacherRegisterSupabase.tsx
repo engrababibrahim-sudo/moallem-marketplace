@@ -122,22 +122,24 @@ export default function TeacherRegisterSupabase() {
       setLoadingTeacherProfile(true);
       setError("");
 
-      const [{ data: account, error: accountError }, { data: teacher, error: teacherLoadError }] =
-        await Promise.all([
-          supabase
-            .from("profiles")
-            .select("full_name,phone,city,country")
-            .eq("id", user.id)
-            .maybeSingle(),
+      const [
+        { data: account, error: accountError },
+        { data: teacher, error: teacherLoadError },
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("full_name,phone,city,country")
+          .eq("id", user.id)
+          .maybeSingle(),
 
-          supabase
-            .from("teacher_profiles")
-            .select(
-              "display_name,bio,qualification,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate,currency,verification_status,rejection_reason"
-            )
-            .eq("id", user.id)
-            .maybeSingle(),
-        ]);
+        supabase
+          .from("teacher_profiles")
+          .select(
+            "display_name,bio,qualification,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate,currency,verification_status,rejection_reason"
+          )
+          .eq("id", user.id)
+          .maybeSingle(),
+      ]);
 
       if (cancelled) return;
 
@@ -369,44 +371,15 @@ export default function TeacherRegisterSupabase() {
     setStatus("submitting");
 
     try {
-      // احفظ آخر التعديلات أولًا، ولا ترسل الطلب إذا فشل الحفظ.
       const saved = await saveProfileData();
 
       if (!saved) return;
 
-      // لا نغيّر حالة الاعتماد إلا بعد نجاح حفظ البيانات.
-      const { data: updatedTeacher, error: submitError } = await supabase
-        .from("teacher_profiles")
-        .update({
-          verification_status: "pending",
-          rejection_reason: null,
-        })
-        .eq("id", user.id)
-        .select("id")
-        .maybeSingle();
-
-      if (submitError) {
-        setError(
-          "تم حفظ بياناتك، لكن تعذر إرسال الطلب للمراجعة. " +
-            submitError.message
-        );
-        return;
-      }
-
-      if (!updatedTeacher) {
-        setError(
-          "تم حفظ البيانات، لكن لم يتم إرسال الطلب. " +
-            "تحققي من صلاحيات حسابك وسياسات قاعدة البيانات."
-        );
-        return;
-      }
-
-      setVerificationStatus("pending");
-      setHasTeacherProfile(true);
-      setMessage(
-        "تم حفظ بياناتك وإرسال طلبك للمراجعة بنجاح. سيظهر ملفك للطلاب بعد اعتماد الإدارة."
+      // لا نغيّر حالة الاعتماد مباشرة من حساب المعلم.
+      // يلزم إعداد إجراء آمن في قاعدة البيانات لإرسال الطلب للمراجعة.
+      setError(
+        "تم حفظ بياناتك، لكن إرسال الطلب للمراجعة يحتاج إلى إعداد إجراء آمن في قاعدة البيانات. لم يتم تغيير حالة الاعتماد."
       );
-      setEditMode(false);
     } catch (err) {
       console.error("Teacher application submission failed:", err);
       setError(
@@ -608,6 +581,8 @@ export default function TeacherRegisterSupabase() {
                 />
               </label>
 
+              <TeacherVerificationUploads />
+
               <button
                 type="submit"
                 disabled={status !== "idle"}
@@ -634,4 +609,3 @@ export default function TeacherRegisterSupabase() {
     </main>
   );
 }
-
