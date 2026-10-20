@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Search,
@@ -11,6 +10,7 @@ import {
   Eye,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import AdminTeacherVerificationDocuments from "./AdminTeacherVerificationDocuments";
 
 type TeacherStatus = "pending" | "approved" | "rejected";
 
@@ -42,6 +42,12 @@ const statusStyles: Record<string, string> = {
   approved: "bg-emerald-100 text-emerald-800",
   rejected: "bg-red-100 text-red-800",
 };
+
+const REQUIRED_DOCUMENTS = [
+  "qualification",
+  "identity",
+  "teaching_video",
+] as const;
 
 export default function AdminTeacherVerification() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -134,50 +140,91 @@ export default function AdminTeacherVerification() {
     setError("");
     setNotice("");
 
-    const { data, error: updateError } = await supabase
-      .from("teacher_profiles")
-      .update({
-        verification_status: status,
-        rejection_reason:
-          status === "rejected" ? reason.trim() : null,
-      })
-      .eq("id", teacher.id)
-      .select("id,verification_status,rejection_reason")
-      .maybeSingle();
+    try {
+      // لا يُسمح بالاعتماد النهائي قبل قبول المستندات الثلاثة.
+      if (status === "approved") {
+        const { data: docs, error: docsError } = await supabase
+          .from("teacher_verification_documents")
+          .select("document_type,status")
+          .eq("teacher_id", teacher.id);
 
-    if (updateError) {
-      setError(
-        "لم يتم حفظ القرار. تحققي من صلاحيات التحديث وسياسات RLS في Supabase. التفاصيل: " +
-          updateError.message
+        if (docsError) {
+          setError(
+            "تعذر التحقق من مستندات المعلم. تأكدي من إنشاء جدول المستندات وصلاحيات الإدارة. التفاصيل: " +
+              docsError.message
+          );
+          return;
+        }
+
+        const allDocumentsApproved = REQUIRED_DOCUMENTS.every((type) =>
+          (docs ?? []).some(
+            (doc) =>
+              doc.document_type === type && doc.status === "approved"
+          )
+        );
+
+        if (!allDocumentsApproved) {
+          setError(
+            "لا يمكن اعتماد المعلم قبل رفع شهادة المؤهل وإثبات الهوية وفيديو الشرح، ثم موافقة الإدارة على كل مستند."
+          );
+          return;
+        }
+      }
+
+      const { data, error: updateError } = await supabase
+        .from("teacher_profiles")
+        .update({
+          verification_status: status,
+          rejection_reason:
+            status === "rejected" ? reason.trim() : null,
+        })
+        .eq("id", teacher.id)
+        .select("id,verification_status,rejection_reason")
+        .maybeSingle();
+
+      if (updateError) {
+        setError(
+          "لم يتم حفظ القرار. تحققي من صلاحيات التحديث وسياسات RLS في Supabase. التفاصيل: " +
+            updateError.message
+        );
+        return;
+      }
+
+      if (!data) {
+        setError(
+          "لم تُرجع قاعدة البيانات سجلًا بعد التحديث. قد تمنع سياسات RLS قراءة السجل أو تعديله."
+        );
+        return;
+      }
+
+      setTeachers((current) =>
+        current.map((item) =>
+          item.id === teacher.id
+            ? {
+                ...item,
+                verification_status: data.verification_status,
+                rejection_reason: data.rejection_reason,
+              }
+            : item
+        )
       );
-      setSaving(false);
-      return;
-    }
 
-    if (!data) {
-      setError(
-        "لم تُرجع قاعدة البيانات سجلًا بعد التحديث. قد تمنع سياسات RLS قراءة السجل أو تعديله."
+      setSelected(null);
+      setReason("");
+      setNotice(
+        status === "approved"
+          ? "تم اعتماد المعلم بنجاح."
+          : "تم تسجيل رفض الطلب."
       );
+    } catch (unexpectedError) {
+      setError(
+        unexpectedError instanceof Error
+          ? unexpectedError.message
+          : "حدث خطأ غير متوقع أثناء حفظ القرار."
+      );
+    } finally {
       setSaving(false);
-      return;
     }
-
-    setTeachers((current) =>
-      current.map((item) =>
-        item.id === teacher.id
-          ? {
-              ...item,
-              verification_status: data.verification_status,
-              rejection_reason: data.rejection_reason,
-            }
-          : item
-      )
-    );
-
-    setSelected(null);
-    setReason("");
-    setNotice("تم حفظ قرار الاعتماد في قاعدة البيانات.");
-    setSaving(false);
   }
 
   const cards = [
@@ -227,7 +274,7 @@ export default function AdminTeacherVerification() {
               مراجعة واعتماد المدرسين
             </h1>
             <p className="mt-2 text-sm text-slate-500">
-              مراجعة بيانات المدرسين وتسجيل قرارات الإدارة.
+              مراجعة بيانات المدرسين ومستنداتهم وتسجيل قرارات الإدارة.
             </p>
           </div>
 
@@ -338,8 +385,8 @@ export default function AdminTeacherVerification() {
               />
               <h3 className="font-bold">لا توجد طلبات مطابقة</h3>
               <p className="mt-2 text-sm text-slate-500">
-                إذا كنتِ تتوقعين وجود طلبات، تحققي من أن المدرس أرسل طلب
-                المراجعة، ومن صلاحيات قراءة الجدول.
+                إذا كنتِ تتوقعين وجود طلبات، تحققي من إرسال طلب المراجعة
+                وصلاحيات قراءة الجدول.
               </p>
             </div>
           ) : (
@@ -417,7 +464,7 @@ export default function AdminTeacherVerification() {
             {[
               "التحقق من الهوية وصحة البيانات الشخصية.",
               "مراجعة المؤهل الدراسي والتخصص.",
-              "التحقق من المستندات والشهادات المطلوبة.",
+              "مراجعة شهادة المؤهل وإثبات الهوية وفيديو الشرح.",
               "ملاءمة المواد والمراحل والصفوف.",
               "مراجعة الخبرة والنبذة المهنية.",
               "تسجيل سبب الرفض عند عدم استيفاء الشروط.",
@@ -431,11 +478,6 @@ export default function AdminTeacherVerification() {
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-xs leading-6 text-slate-500">
-            ملاحظة: جدول التسجيل الذي راجعناه لا يحتوي على حقل واضح لرفع
-            مستندات الهوية أو الشهادات؛ لذلك يجب التحقق منها خارج هذه الصفحة
-            إلى أن تُضاف آلية رفع المستندات ومراجعتها.
-          </p>
         </section>
       </div>
 
@@ -452,7 +494,7 @@ export default function AdminTeacherVerification() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="teacher-review-title"
-            className="my-auto w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl"
+            className="my-auto w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl"
           >
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
@@ -521,8 +563,15 @@ export default function AdminTeacherVerification() {
               </p>
             </div>
 
+            {/* قسم مراجعة المستندات الخاصة */}
+            <div className="mt-5">
+              <AdminTeacherVerificationDocuments
+                teacherId={selected.id}
+              />
+            </div>
+
             <label className="mt-5 block text-sm font-bold">
-              سبب الرفض أو ملاحظات المراجعة
+              سبب الرفض أو ملاحظات الإدارة
               <textarea
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
