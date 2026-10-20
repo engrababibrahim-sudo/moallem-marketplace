@@ -1,48 +1,531 @@
+```tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { GraduationCap, LogOut, Search, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
-type Teacher = { id: string; display_name: string | null; bio: string | null; city: string | null; country: string | null; years_experience: number; hourly_rate: number | null; currency: string; subjects: string[] };
+type Teacher = {
+  id: string;
+  display_name: string | null;
+  bio: string | null;
+  city: string | null;
+  country: string | null;
+  years_experience: number;
+  hourly_rate: number | null;
+  currency: string;
+  subjects: string[];
+};
 
 export default function Portal() {
   const { profile, signOut } = useAuth();
   const [, navigate] = useLocation();
-  const [teachers,setTeachers]=useState<Teacher[]>([]);
-  const [query,setQuery]=useState("");
-  const [loading,setLoading]=useState(true);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(()=>{ let active=true;
-    supabase.from("teacher_profiles")
-      .select("id,display_name,bio,years_experience,hourly_rate,currency,subjects")
-      .eq("verification_status","approved").order("created_at",{ascending:false}).limit(24)
-      .then(({data})=>{ if(!active)return; setTeachers((data ?? []).map((x: { id: string; display_name: string | null; bio: string | null; years_experience: number; hourly_rate: number | null; currency: string | null; subjects: string[] | null }) => ({ id: x.id, display_name: x.display_name ?? "معلم", bio: x.bio, years_experience: x.years_experience, hourly_rate: x.hourly_rate, currency: x.currency ?? "EGP", subjects: x.subjects ?? [], city: null, country: null }))); setLoading(false);});
-    return()=>{active=false};
-  },[]);
+  useEffect(() => {
+    let active = true;
 
-  const filtered=useMemo(()=>{const q=query.trim().toLowerCase(); if(!q)return teachers; return teachers.filter(t=>(t.display_name ?? "").toLowerCase().includes(q)||t.subjects.some(s=>s.toLowerCase().includes(q))||(t.city??"").toLowerCase().includes(q));},[teachers,query]);
-  if(!profile)return null;
-  const isAdmin=["admin","super_admin","support"].includes(profile.role);
+    supabase
+      .from("teacher_profiles")
+      .select(
+        "id,display_name,bio,years_experience,hourly_rate,currency,subjects"
+      )
+      .eq("verification_status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(24)
+      .then(({ data }) => {
+        if (!active) return;
 
-  async function logout(){await signOut();navigate("/");}
+        setTeachers(
+          (
+            data ?? []
+          ).map(
+            (x: {
+              id: string;
+              display_name: string | null;
+              bio: string | null;
+              years_experience: number;
+              hourly_rate: number | null;
+              currency: string | null;
+              subjects: string[] | null;
+            }) => ({
+              id: x.id,
+              display_name: x.display_name ?? "معلم",
+              bio: x.bio,
+              years_experience: x.years_experience,
+              hourly_rate: x.hourly_rate,
+              currency: x.currency ?? "EGP",
+              subjects: x.subjects ?? [],
+              city: null,
+              country: null,
+            })
+          )
+        );
 
-  return <div dir="rtl" className="min-h-screen bg-[#fbf8f4] text-[#182431]">
-    <header className="sticky top-0 z-20 border-b border-black/[.06] bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-10">
-      <Link href="/" className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#182431] text-white"><GraduationCap className="h-5 w-5"/></span><b>مُعلّم</b></Link>
-      <div className="flex items-center gap-2"><div className="hidden md:block text-sm text-black/55">{profile.full_name||profile.email}</div>{profile.role==="student"&&<Link href="/student/bookings" className="rounded-full border border-black/10 px-4 py-2 text-xs font-bold">حجوزاتي</Link>}</div>
-      <button onClick={logout} className="inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-xs font-bold"><LogOut className="h-4 w-4"/> خروج</button>
-    </div></header>
-    <main className="mx-auto max-w-7xl px-5 py-8 lg:px-10 lg:py-12">
-      <section className="rounded-[2rem] bg-[#182431] p-7 text-white lg:p-10"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-bold text-[#ffb36e]">{isAdmin?"مركز الإدارة":"مساحة التعلم"}</p><h1 className="mt-2 text-3xl font-extrabold">{isAdmin?"لوحة التحكم":"أهلًا "+(profile.full_name||"بك")}</h1><p className="mt-3 max-w-2xl text-sm leading-7 text-white/60">تابع حسابك وطلباتك التعليمية من مساحة واحدة آمنة.</p></div>{profile.role==="teacher"&&<div className="flex flex-wrap gap-2"><Link href="/teacher/bookings" className="rounded-full bg-[#ff7a00] px-5 py-3 text-sm font-extrabold text-white">طلبات الحجز</Link><Link href="/teacher/availability" className="rounded-full border border-white/15 px-5 py-3 text-sm font-bold text-white">مواعيد التوافر</Link></div>}</div></section>
-      {isAdmin ? <AdminStats/> : <section className="mt-9"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm font-bold text-[#c55d08]">سوق المعلمين</p><h2 className="mt-1 text-2xl font-extrabold">معلمون معتمدون</h2></div><div className="flex w-full max-w-sm items-center rounded-2xl bg-white px-4 py-3 shadow-sm"><Search className="h-4 w-4 text-black/35"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="الاسم أو المادة أو المدينة" className="w-full bg-transparent px-3 text-sm outline-none"/></div></div>
-        {loading?<div className="py-12 text-center text-sm text-black/45">جارٍ تحميل المعلمين...</div>:filtered.length===0?<div className="mt-6 rounded-3xl bg-white p-10 text-center shadow-sm"><ShieldCheck className="mx-auto h-8 w-8 text-black/20"/><h3 className="mt-4 font-extrabold">لا يوجد معلمون معتمدون بعد</h3></div>:<div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{filtered.map(t=><TeacherCard key={t.id} teacher={t}/>)}</div>}
-      </section>}
-    </main>
-  </div>;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    if (!q) return teachers;
+
+    return teachers.filter(
+      (t) =>
+        (t.display_name ?? "").toLowerCase().includes(q) ||
+        t.subjects.some((s) => s.toLowerCase().includes(q)) ||
+        (t.city ?? "").toLowerCase().includes(q)
+    );
+  }, [teachers, query]);
+
+  if (!profile) return null;
+
+  const isAdmin = ["admin", "super_admin", "support"].includes(
+    profile.role
+  );
+
+  async function logout() {
+    await signOut();
+    navigate("/");
+  }
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-[#fbf8f4] text-[#182431]">
+      <header className="sticky top-0 z-20 border-b border-black/[.06] bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-10">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#182431] text-white">
+              <GraduationCap className="h-5 w-5" />
+            </span>
+            <b>مُعلّم</b>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <div className="hidden text-sm text-black/55 md:block">
+              {profile.full_name || profile.email}
+            </div>
+
+            {profile.role === "student" && (
+              <Link
+                href="/student/bookings"
+                className="rounded-full border border-black/10 px-4 py-2 text-xs font-bold"
+              >
+                حجوزاتي
+              </Link>
+            )}
+          </div>
+
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-xs font-bold"
+          >
+            <LogOut className="h-4 w-4" />
+            خروج
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-5 py-8 lg:px-10 lg:py-12">
+        <section className="rounded-[2rem] bg-[#182431] p-7 text-white lg:p-10">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-[#ffb36e]">
+                {isAdmin ? "مركز الإدارة" : "مساحة التعلم"}
+              </p>
+
+              <h1 className="mt-2 text-3xl font-extrabold">
+                {isAdmin
+                  ? "لوحة التحكم"
+                  : "أهلًا " + (profile.full_name || "بك")}
+              </h1>
+
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-white/60">
+                تابع حسابك وطلباتك التعليمية من مساحة واحدة آمنة.
+              </p>
+            </div>
+
+            {profile.role === "teacher" && (
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/teacher/register"
+                  className="rounded-full bg-white px-5 py-3 text-sm font-extrabold text-[#182431] transition hover:bg-[#fff0e2]"
+                >
+                  تعديل الملف الشخصي
+                </Link>
+
+                <Link
+                  href="/teacher/bookings"
+                  className="rounded-full bg-[#ff7a00] px-5 py-3 text-sm font-extrabold text-white"
+                >
+                  طلبات الحجز
+                </Link>
+
+                <Link
+                  href="/teacher/availability"
+                  className="rounded-full border border-white/15 px-5 py-3 text-sm font-bold text-white"
+                >
+                  مواعيد التوافر
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {isAdmin ? (
+          <AdminStats />
+        ) : (
+          <section className="mt-9">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-sm font-bold text-[#c55d08]">
+                  سوق المعلمين
+                </p>
+                <h2 className="mt-1 text-2xl font-extrabold">
+                  معلمون معتمدون
+                </h2>
+              </div>
+
+              <div className="flex w-full max-w-sm items-center rounded-2xl bg-white px-4 py-3 shadow-sm">
+                <Search className="h-4 w-4 text-black/35" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="الاسم أو المادة أو المدينة"
+                  className="w-full bg-transparent px-3 text-sm outline-none"
+                />
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="py-12 text-center text-sm text-black/45">
+                جارٍ تحميل المعلمين...
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="mt-6 rounded-3xl bg-white p-10 text-center shadow-sm">
+                <ShieldCheck className="mx-auto h-8 w-8 text-black/20" />
+                <h3 className="mt-4 font-extrabold">
+                  لا يوجد معلمون معتمدون بعد
+                </h3>
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((t) => (
+                  <TeacherCard key={t.id} teacher={t} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+    </div>
+  );
 }
 
-function TeacherCard({teacher}:{teacher:Teacher}){return <article className="rounded-[1.5rem] bg-white p-5 shadow-sm"><div className="flex items-start gap-3"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#fff0e2] font-extrabold text-[#c55d08]">{(teacher.display_name ?? "معلم").split(/\s+/).map(x=>x[0]).slice(0,2).join("")}</span><div><h3 className="font-extrabold">{teacher.display_name ?? "معلم"}</h3><p className="mt-1 text-xs text-black/50">{teacher.subjects.join(" · ")||"مواد تعليمية"}{teacher.city?" · "+teacher.city:""}{teacher.country?" · "+teacher.country:""}</p></div></div><p className="mt-5 min-h-12 text-sm leading-6 text-black/55">{teacher.bio||"معلم معتمد على منصة مُعلّم."}</p><div className="mt-4 grid grid-cols-2 gap-2 text-xs"><span className="rounded-xl bg-[#fbf8f4] p-3"><b>{teacher.years_experience}</b> سنوات خبرة</span><span className="rounded-xl bg-[#fbf8f4] p-3"><b>{teacher.hourly_rate??"—"}</b> {teacher.currency} / ساعة</span></div><Link href={"/teachers/" + teacher.id} className="mt-4 block w-full rounded-full bg-[#182431] py-3 text-center text-sm font-bold text-white">عرض الملف والحجز</Link></article>}
+function TeacherCard({ teacher }: { teacher: Teacher }) {
+  return (
+    <article className="rounded-[1.5rem] bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#fff0e2] font-extrabold text-[#c55d08]">
+          {(teacher.display_name ?? "معلم")
+            .split(/\s+/)
+            .map((x) => x[0])
+            .slice(0, 2)
+            .join("")}
+        </span>
 
-function AdminStats(){const [stats,setStats]=useState({users:0,teachers:0,pending:0,bookings:0}); const [pending,setPending]=useState<any[]>([]); const [selected,setSelected]=useState<any|null>(null); const [reason,setReason]=useState(""); const [busy,setBusy]=useState(false); const load=async()=>{const [u,t,p,b,list]=await Promise.all([supabase.from("profiles").select("id",{count:"exact",head:true}),supabase.from("teacher_profiles").select("id",{count:"exact",head:true}),supabase.from("teacher_profiles").select("id",{count:"exact",head:true}).eq("verification_status","pending"),supabase.from("bookings").select("id",{count:"exact",head:true}),supabase.from("teacher_profiles").select("id,display_name,bio,qualification,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate,currency,rejection_reason,created_at").eq("verification_status","pending").order("created_at",{ascending:true})]); setStats({users:u.count??0,teachers:t.count??0,pending:p.count??0,bookings:b.count??0}); setPending(list.data??[]);}; useEffect(()=>{load();},[]); const review=async(status:"approved"|"rejected")=>{if(!selected)return;setBusy(true);const {error}=await supabase.from("teacher_profiles").update({verification_status:status,rejection_reason:status==="rejected"?(reason.trim()||"يرجى استكمال البيانات وإعادة الإرسال."):null,reviewed_by:(await supabase.auth.getUser()).data.user?.id,reviewed_at:new Date().toISOString()}).eq("id",selected.id);setBusy(false);if(!error){setSelected(null);setReason("");await load();}};return <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["المستخدمون",stats.users],["المعلمون",stats.teachers],["طلبات المراجعة",stats.pending],["الحجوزات",stats.bookings]].map(([l,v])=><div key={String(l)} className="rounded-3xl bg-white p-6 shadow-sm"><p className="text-sm text-black/50">{l}</p><strong className="mt-2 block text-3xl">{v}</strong></div>)}<section className="sm:col-span-2 lg:col-span-4 rounded-3xl bg-white p-6 shadow-sm"><div className="flex items-center justify-between gap-3"><div><h2 className="font-extrabold">طلبات اعتماد المعلمين</h2><p className="mt-1 text-sm text-black/45">راجع الملف قبل ظهوره في سوق المعلمين.</p></div><span className="rounded-full bg-[#fff0e2] px-3 py-1 text-xs font-bold text-[#c55d08]">{pending.length} قيد المراجعة</span></div>{pending.length===0?<p className="mt-6 rounded-2xl bg-[#fbf8f4] p-5 text-sm text-black/50">لا توجد طلبات جديدة حاليًا.</p>:<div className="mt-5 grid gap-3">{pending.map(t=><button key={t.id} onClick={()=>{setSelected(t);setReason("");}} className="rounded-2xl border border-black/5 bg-[#fbf8f4] p-4 text-right hover:border-[#ff7a00]/40"><div className="flex items-center justify-between"><b>{t.display_name||"معلم بدون اسم"}</b><span className="text-xs text-black/45">{t.subjects?.join(" · ")||"لم يحدد المواد"}</span></div><p className="mt-2 line-clamp-2 text-xs leading-6 text-black/50">{t.bio||"لا توجد نبذة."}</p></button>)}</div>}</section><div className="sm:col-span-2 lg:col-span-4 rounded-3xl bg-white p-6 shadow-sm"><h2 className="font-extrabold">حماية المنصة</h2><p className="mt-3 text-sm leading-7 text-black/55">لا يمكن إنشاء حساب إداري من التسجيل، والمعلم لا يظهر قبل الاعتماد، والحساب الموقوف لا يملك صلاحيات العمليات المحمية.</p></div>{selected&&<div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-5"><div dir="rtl" className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-[2rem] bg-white p-7"><div className="flex items-start justify-between"><div><p className="text-sm font-bold text-[#c55d08]">طلب اعتماد معلم</p><h3 className="mt-1 text-2xl font-extrabold">{selected.display_name||"معلم"}</h3></div><button onClick={()=>setSelected(null)} className="rounded-full bg-black/5 px-3 py-1 text-sm">إغلاق</button></div><div className="mt-6 grid gap-3 sm:grid-cols-2 text-sm"><Info label="المؤهل" value={selected.qualification}/><Info label="التخصص" value={selected.specialization}/><Info label="الخبرة" value={selected.years_experience+" سنة"}/><Info label="السعر" value={selected.hourly_rate?(selected.hourly_rate+" "+(selected.currency||"EGP")+" / ساعة"):"غير محدد"}/><Info label="المواد" value={selected.subjects?.join("، ")}/><Info label="المراحل" value={selected.education_stages?.join("، ")}/><Info label="الصفوف" value={selected.grades?.join("، ")}/><Info label="صيغة التدريس" value={selected.teaching_format}/></div><p className="mt-5 rounded-2xl bg-[#fbf8f4] p-4 text-sm leading-7">{selected.bio||"لا توجد نبذة."}</p><textarea value={reason} onChange={e=>setReason(e.target.value)} placeholder="ملاحظة للمعلم عند الرفض (اختياري)" className="mt-4 min-h-24 w-full rounded-xl border border-black/10 bg-[#fbf8f4] p-3 text-sm outline-none"/><div className="mt-4 grid gap-3 sm:grid-cols-2"><button disabled={busy} onClick={()=>review("approved")} className="rounded-full bg-emerald-600 py-3 font-bold text-white">اعتماد المعلم</button><button disabled={busy} onClick={()=>review("rejected")} className="rounded-full bg-red-600 py-3 font-bold text-white">رفض الطلب</button></div></div></div>}</div>}
-function Info({label,value}:{label:string;value:any}){return <div className="rounded-xl bg-[#fbf8f4] p-3"><span className="block text-xs text-black/45">{label}</span><b className="mt-1 block">{value||"—"}</b></div>}
+        <div>
+          <h3 className="font-extrabold">
+            {teacher.display_name ?? "معلم"}
+          </h3>
+
+          <p className="mt-1 text-xs text-black/50">
+            {teacher.subjects.join(" · ") || "مواد تعليمية"}
+            {teacher.city ? " · " + teacher.city : ""}
+            {teacher.country ? " · " + teacher.country : ""}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-5 min-h-12 text-sm leading-6 text-black/55">
+        {teacher.bio || "معلم معتمد على منصة مُعلّم."}
+      </p>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+        <span className="rounded-xl bg-[#fbf8f4] p-3">
+          <b>{teacher.years_experience}</b> سنوات خبرة
+        </span>
+
+        <span className="rounded-xl bg-[#fbf8f4] p-3">
+          <b>{teacher.hourly_rate ?? "—"}</b> {teacher.currency} / ساعة
+        </span>
+      </div>
+
+      <Link
+        href={"/teachers/" + teacher.id}
+        className="mt-4 block w-full rounded-full bg-[#182431] py-3 text-center text-sm font-bold text-white"
+      >
+        عرض الملف والحجز
+      </Link>
+    </article>
+  );
+}
+
+function AdminStats() {
+  const [stats, setStats] = useState({
+    users: 0,
+    teachers: 0,
+    pending: 0,
+    bookings: 0,
+  });
+
+  const [pending, setPending] = useState<any[]>([]);
+  const [selected, setSelected] = useState<any | null>(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    const [u, t, p, b, list] = await Promise.all([
+      supabase.from("profiles").select("id", {
+        count: "exact",
+        head: true,
+      }),
+      supabase.from("teacher_profiles").select("id", {
+        count: "exact",
+        head: true,
+      }),
+      supabase
+        .from("teacher_profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("verification_status", "pending"),
+      supabase.from("bookings").select("id", {
+        count: "exact",
+        head: true,
+      }),
+      supabase
+        .from("teacher_profiles")
+        .select(
+          "id,display_name,bio,qualification,specialization,years_experience,subjects,education_stages,grades,teaching_format,hourly_rate,currency,rejection_reason,created_at"
+        )
+        .eq("verification_status", "pending")
+        .order("created_at", { ascending: true }),
+    ]);
+
+    setStats({
+      users: u.count ?? 0,
+      teachers: t.count ?? 0,
+      pending: p.count ?? 0,
+      bookings: b.count ?? 0,
+    });
+
+    setPending(list.data ?? []);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const review = async (status: "approved" | "rejected") => {
+    if (!selected) return;
+
+    setBusy(true);
+
+    const { error } = await supabase
+      .from("teacher_profiles")
+      .update({
+        verification_status: status,
+        rejection_reason:
+          status === "rejected"
+            ? reason.trim() || "يرجى استكمال البيانات وإعادة الإرسال."
+            : null,
+        reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", selected.id);
+
+    setBusy(false);
+
+    if (!error) {
+      setSelected(null);
+      setReason("");
+      await load();
+    }
+  };
+
+  return (
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {[
+        ["المستخدمون", stats.users],
+        ["المعلمون", stats.teachers],
+        ["طلبات المراجعة", stats.pending],
+        ["الحجوزات", stats.bookings],
+      ].map(([l, v]) => (
+        <div
+          key={String(l)}
+          className="rounded-3xl bg-white p-6 shadow-sm"
+        >
+          <p className="text-sm text-black/50">{l}</p>
+          <strong className="mt-2 block text-3xl">{v}</strong>
+        </div>
+      ))}
+
+      <section className="rounded-3xl bg-white p-6 shadow-sm sm:col-span-2 lg:col-span-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-extrabold">طلبات اعتماد المعلمين</h2>
+            <p className="mt-1 text-sm text-black/45">
+              راجع الملف قبل ظهوره في سوق المعلمين.
+            </p>
+          </div>
+
+          <span className="rounded-full bg-[#fff0e2] px-3 py-1 text-xs font-bold text-[#c55d08]">
+            {pending.length} قيد المراجعة
+          </span>
+        </div>
+
+        {pending.length === 0 ? (
+          <p className="mt-6 rounded-2xl bg-[#fbf8f4] p-5 text-sm text-black/50">
+            لا توجد طلبات جديدة حاليًا.
+          </p>
+        ) : (
+          <div className="mt-5 grid gap-3">
+            {pending.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setSelected(t);
+                  setReason("");
+                }}
+                className="rounded-2xl border border-black/5 bg-[#fbf8f4] p-4 text-right hover:border-[#ff7a00]/40"
+              >
+                <div className="flex items-center justify-between">
+                  <b>{t.display_name || "معلم بدون اسم"}</b>
+                  <span className="text-xs text-black/45">
+                    {t.subjects?.join(" · ") || "لم يحدد المواد"}
+                  </span>
+                </div>
+
+                <p className="mt-2 line-clamp-2 text-xs leading-6 text-black/50">
+                  {t.bio || "لا توجد نبذة."}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <div className="rounded-3xl bg-white p-6 shadow-sm sm:col-span-2 lg:col-span-4">
+        <h2 className="font-extrabold">حماية المنصة</h2>
+        <p className="mt-3 text-sm leading-7 text-black/55">
+          لا يمكن إنشاء حساب إداري من التسجيل، والمعلم لا يظهر قبل
+          الاعتماد، والحساب الموقوف لا يملك صلاحيات العمليات المحمية.
+        </p>
+      </div>
+
+      {selected && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-5">
+          <div
+            dir="rtl"
+            className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-[2rem] bg-white p-7"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-bold text-[#c55d08]">
+                  طلب اعتماد معلم
+                </p>
+                <h3 className="mt-1 text-2xl font-extrabold">
+                  {selected.display_name || "معلم"}
+                </h3>
+              </div>
+
+              <button
+                onClick={() => setSelected(null)}
+                className="rounded-full bg-black/5 px-3 py-1 text-sm"
+              >
+                إغلاق
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
+              <Info label="المؤهل" value={selected.qualification} />
+              <Info label="التخصص" value={selected.specialization} />
+              <Info
+                label="الخبرة"
+                value={selected.years_experience + " سنة"}
+              />
+              <Info
+                label="السعر"
+                value={
+                  selected.hourly_rate
+                    ? selected.hourly_rate +
+                      " " +
+                      (selected.currency || "EGP") +
+                      " / ساعة"
+                    : "غير محدد"
+                }
+              />
+              <Info
+                label="المواد"
+                value={selected.subjects?.join("، ")}
+              />
+              <Info
+                label="المراحل"
+                value={selected.education_stages?.join("، ")}
+              />
+              <Info label="الصفوف" value={selected.grades?.join("، ")} />
+              <Info
+                label="صيغة التدريس"
+                value={selected.teaching_format}
+              />
+            </div>
+
+            <p className="mt-5 rounded-2xl bg-[#fbf8f4] p-4 text-sm leading-7">
+              {selected.bio || "لا توجد نبذة."}
+            </p>
+
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="ملاحظة للمعلم عند الرفض (اختياري)"
+              className="mt-4 min-h-24 w-full rounded-xl border border-black/10 bg-[#fbf8f4] p-3 text-sm outline-none"
+            />
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <button
+                disabled={busy}
+                onClick={() => review("approved")}
+                className="rounded-full bg-emerald-600 py-3 font-bold text-white"
+              >
+                اعتماد المعلم
+              </button>
+
+              <button
+                disabled={busy}
+                onClick={() => review("rejected")}
+                className="rounded-full bg-red-600 py-3 font-bold text-white"
+              >
+                رفض الطلب
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="rounded-xl bg-[#fbf8f4] p-3">
+      <span className="block text-xs text-black/45">{label}</span>
+      <b className="mt-1 block">{value || "—"}</b>
+    </div>
+  );
+}
+```
