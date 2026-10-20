@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
@@ -9,6 +10,7 @@ import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Portal from "./pages/Portal";
 import Admin from "./pages/Admin";
+import AdminTeacherVerification from "./pages/AdminTeacherVerification";
 import TeacherRegister from "./pages/TeacherRegisterSupabase";
 import Teachers from "./pages/Teachers";
 import TeacherDetail from "./pages/TeacherDetail";
@@ -31,18 +33,67 @@ export default function App() {
               <Route path="/" component={Home} />
               <Route path="/auth" component={Auth} />
               <Route path="/parent-request" component={ParentRequest} />
-              <Route path="/admin/parent-requests" component={ParentRequestsAdmin} />
+
+              <Route path="/admin/parent-requests">
+                <ProtectedRoute roles={["admin", "super_admin", "support"]}>
+                  <ParentRequestsAdmin />
+                </ProtectedRoute>
+              </Route>
+
               <Route path="/teacher/register" component={TeacherRegister} />
               <Route path="/teachers" component={Teachers} />
               <Route path="/book/:id" component={TeacherBooking} />
               <Route path="/teachers/:id" component={TeacherDetail} />
-              <Route path="/teacher/availability"><ProtectedRoute roles={["teacher"]}><TeacherAvailabilitySupabase /></ProtectedRoute></Route>
-              <Route path="/teacher/bookings"><ProtectedRoute roles={["teacher"]}><TeacherBookings /></ProtectedRoute></Route>
-              <Route path="/student/bookings"><ProtectedRoute roles={["student"]}><StudentBookings /></ProtectedRoute></Route>
-              <Route path="/payment/result"><ProtectedRoute roles={["student"]}><PaymentResult /></ProtectedRoute></Route>
-              <Route path="/portal"><ProtectedRoute><Portal /></ProtectedRoute></Route>
-              <Route path="/admin"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
-              <Route path="/admin/:section"><ProtectedRoute roles={["admin", "super_admin", "support"]}><Admin /></ProtectedRoute></Route>
+
+              <Route path="/teacher/availability">
+                <ProtectedRoute roles={["teacher"]}>
+                  <TeacherAvailabilitySupabase />
+                </ProtectedRoute>
+              </Route>
+
+              <Route path="/teacher/bookings">
+                <ProtectedRoute roles={["teacher"]}>
+                  <TeacherBookings />
+                </ProtectedRoute>
+              </Route>
+
+              <Route path="/student/bookings">
+                <ProtectedRoute roles={["student"]}>
+                  <StudentBookings />
+                </ProtectedRoute>
+              </Route>
+
+              <Route path="/payment/result">
+                <ProtectedRoute roles={["student"]}>
+                  <PaymentResult />
+                </ProtectedRoute>
+              </Route>
+
+              <Route path="/portal">
+                <ProtectedRoute>
+                  <Portal />
+                </ProtectedRoute>
+              </Route>
+
+              {/* صفحة اعتماد المدرسين */}
+              <Route path="/admin/teacher-verification">
+                <ProtectedRoute roles={["admin", "super_admin"]}>
+                  <AdminTeacherVerification />
+                </ProtectedRoute>
+              </Route>
+
+              <Route path="/admin/:section">
+                <ProtectedRoute roles={["admin", "super_admin", "support"]}>
+                  <Admin />
+                </ProtectedRoute>
+              </Route>
+
+              <Route path="/admin">
+                <ProtectedRoute roles={["admin", "super_admin", "support"]}>
+                  <Admin />
+                </ProtectedRoute>
+              </Route>
+
               <Route component={Home} />
             </Switch>
           </AuthProvider>
