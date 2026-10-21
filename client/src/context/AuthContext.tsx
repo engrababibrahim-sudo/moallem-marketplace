@@ -66,27 +66,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
+    // Keep this callback synchronous. Supabase warns against awaiting Supabase
+    // requests inside onAuthStateChange because it can block subsequent auth work.
+    supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) return;
+      if (error) {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
       setSession(data.session);
       setUser(data.session?.user ?? null);
-      try {
-        setProfile(data.session?.user ? await fetchProfile(data.session.user.id) : null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!mounted) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
-      try {
-        setProfile(nextSession?.user ? await fetchProfile(nextSession.user.id) : null);
-      } catch {
-        setProfile(null);
-      }
-      setLoading(false);
     });
 
     return () => {
@@ -94,6 +92,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  // Load the profile outside the auth listener so profile queries cannot block
+  // Supabase's auth lock. Ignore stale results if the user changes or unmounts.
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!user?.id) {
+      setProfile(null);
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoading(true);
+    fetchProfile(user.id)
+      .then((nextProfile) => {
+        if (!cancelled) setProfile(nextProfile);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("Failed to load the signed-in user's profile:", error);
+          setProfile(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
