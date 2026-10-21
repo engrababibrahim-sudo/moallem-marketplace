@@ -8,9 +8,12 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerPaymobRoutes } from "./payments/paymob";
 import { registerLiveSessionRoutes } from "./liveSessions/providers";
 import { registerLiveSessionManagementRoutes } from "./liveSessions/routes";
+import { registerGoogleDriveRoutes } from "./google-drive-routes";
 
 export function createApp() {
   const app = express();
+
+  app.set("trust proxy", 1);
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -20,6 +23,7 @@ export function createApp() {
   registerPaymobRoutes(app);
   registerLiveSessionRoutes(app);
   registerLiveSessionManagementRoutes(app);
+  registerGoogleDriveRoutes(app);
 
   app.use(
     "/api/trpc",
