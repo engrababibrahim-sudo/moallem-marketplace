@@ -1,5 +1,6 @@
 
 import { google } from "googleapis";
+import { Readable } from "node:stream";
 
 function getOAuthClient() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -19,36 +20,27 @@ function getOAuthClient() {
   );
 }
 
-/**
- * Creates the Google authorization URL.
- * Use only from a protected administrator endpoint.
- */
 export function getGoogleDriveAuthorizationUrl(state: string) {
   if (!state) {
     throw new Error("OAuth state is required.");
   }
 
-  const oauth2Client = getOAuthClient();
-
-  return oauth2Client.generateAuthUrl({
+  return getOAuthClient().generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
     scope: [
       "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/drive.file",
     ],
     state,
   });
 }
 
-/**
- * Exchanges Google's callback code for a refresh token.
- * The token must only be stored securely on the server.
- */
 export async function exchangeGoogleDriveCode(
   code: string
 ): Promise<string> {
   if (!code) {
-    throw new Error("Google OAuth authorization code is required.");
+    throw new Error("Google Drive authorization code is required.");
   }
 
   const oauth2Client = getOAuthClient();
@@ -63,12 +55,7 @@ export async function exchangeGoogleDriveCode(
   return tokens.refresh_token;
 }
 
-/**
- * Lists files from Google Drive using a server-side refresh token.
- */
-export async function listGoogleDriveFiles(
-  refreshToken: string
-) {
+function getDriveClient(refreshToken: string) {
   if (!refreshToken) {
     throw new Error("Google Drive refresh token is required.");
   }
@@ -79,10 +66,62 @@ export async function listGoogleDriveFiles(
     refresh_token: refreshToken,
   });
 
-  const drive = google.drive({
+  return google.drive({
     version: "v3",
     auth: oauth2Client,
   });
+}
+
+export async function uploadGoogleDriveFile(
+  refreshToken: string,
+  filename: string,
+  mimeType: string,
+  buffer: Buffer
+) {
+  if (!buffer.length) {
+    throw new Error("The uploaded file is empty.");
+  }
+
+  const drive = getDriveClient(refreshToken);
+
+  const response = await drive.files.create({
+    requestBody: {
+      name: filename,
+      mimeType,
+    },
+    media: {
+      mimeType,
+      body: Readable.from([buffer]),
+    },
+    fields: "id,name,mimeType,size,webViewLink",
+  });
+
+  if (!response.data.id) {
+    throw new Error("Google Drive did not return a file ID.");
+  }
+
+  return response.data;
+}
+
+export async function deleteGoogleDriveFile(
+  refreshToken: string,
+  fileId: string
+) {
+  if (!fileId) {
+    throw new Error("Google Drive file ID is required.");
+  }
+
+  const drive = getDriveClient(refreshToken);
+
+  await drive.files.delete({
+    fileId,
+  });
+}
+
+export async function listGoogleDriveFiles(
+  refreshToken: string
+) {
+  const drive = getDriveClient(refreshToken);
 
   const response = await drive.files.list({
     pageSize: 100,
@@ -94,30 +133,15 @@ export async function listGoogleDriveFiles(
   return response.data.files ?? [];
 }
 
-/**
- * Retrieves metadata for a Google Drive file.
- * Check student authorization before returning file information.
- */
 export async function getGoogleDriveFileMetadata(
   refreshToken: string,
   fileId: string
 ) {
-  if (!refreshToken || !fileId) {
-    throw new Error(
-      "Refresh token and file ID are required."
-    );
+  if (!fileId) {
+    throw new Error("Google Drive file ID is required.");
   }
 
-  const oauth2Client = getOAuthClient();
-
-  oauth2Client.setCredentials({
-    refresh_token: refreshToken,
-  });
-
-  const drive = google.drive({
-    version: "v3",
-    auth: oauth2Client,
-  });
+  const drive = getDriveClient(refreshToken);
 
   const response = await drive.files.get({
     fileId,
