@@ -1,16 +1,21 @@
+
 import {
   randomBytes,
   timingSafeEqual,
   createCipheriv,
   createDecipheriv,
 } from "node:crypto";
-import { json, type Express, type Request, type Response } from "express";
+import {
+  json,
+  type Express,
+  type Request,
+  type Response,
+} from "express";
 import { createClient } from "@supabase/supabase-js";
 import {
   exchangeGoogleDriveCode,
   createGoogleDriveUploadSession,
   getGoogleDriveFileMetadata,
-  deleteGoogleDriveFile,
 } from "./google-drive";
 import { sdk } from "./_core/sdk";
 import { isAdmin } from "./authorization";
@@ -24,7 +29,9 @@ function getSupabase() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    throw new Error("Supabase server credentials are not configured.");
+    throw new Error(
+      "Supabase server credentials are not configured."
+    );
   }
 
   return createClient(url, key, {
@@ -47,6 +54,7 @@ function encryptToken(token: string) {
   const key = Buffer.from(rawKey, "hex");
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
+
   const encrypted = Buffer.concat([
     cipher.update(token, "utf8"),
     cipher.final(),
@@ -75,6 +83,7 @@ function decryptToken(encryptedToken: string) {
   }
 
   const [ivHex, tagHex, encryptedHex] = parts;
+
   const decipher = createDecipheriv(
     "aes-256-gcm",
     Buffer.from(rawKey, "hex"),
@@ -116,7 +125,10 @@ function safeEqual(a: string, b: string) {
   );
 }
 
-async function requireAdmin(req: Request, res: Response) {
+async function requireAdmin(
+  req: Request,
+  res: Response
+) {
   try {
     const user = await sdk.authenticateRequest(req);
 
@@ -136,7 +148,10 @@ async function requireAdmin(req: Request, res: Response) {
   }
 }
 
-async function authenticateTeacher(req: Request, res: Response) {
+async function authenticateTeacher(
+  req: Request,
+  res: Response
+) {
   try {
     const user = await sdk.authenticateRequest(req);
 
@@ -164,144 +179,170 @@ async function getGoogleRefreshToken() {
     .maybeSingle();
 
   if (error) {
-    throw new Error("Unable to load the Google Drive connection.");
+    throw new Error(
+      "Unable to load the Google Drive connection."
+    );
   }
 
   if (!data?.refresh_token_encrypted) {
-    throw new Error("Google Drive is not connected by an administrator.");
+    throw new Error(
+      "Google Drive is not connected by an administrator."
+    );
   }
 
   return decryptToken(data.refresh_token_encrypted);
 }
 
 export function registerGoogleDriveRoutes(app: Express) {
-  app.get("/api/google/start", async (req: Request, res: Response) => {
-    if (!(await requireAdmin(req, res))) return;
+  app.get(
+    "/api/google/start",
+    async (req: Request, res: Response) => {
+      if (!(await requireAdmin(req, res))) return;
 
-    const state = randomBytes(32).toString("hex");
+      const state = randomBytes(32).toString("hex");
 
-    try {
-      const { google } = await import("googleapis");
+      try {
+        const { google } = await import("googleapis");
 
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-      const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+        const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
-      if (!clientId || !clientSecret || !redirectUri) {
-        res.status(500).json({
-          error: "Google OAuth is not configured.",
-        });
-        return;
-      }
+        if (!clientId || !clientSecret || !redirectUri) {
+          res.status(500).json({
+            error: "Google OAuth is not configured.",
+          });
+          return;
+        }
 
-      const oauth = new google.auth.OAuth2(
-        clientId,
-        clientSecret,
-        redirectUri
-      );
-
-      const url = oauth.generateAuthUrl({
-        access_type: "offline",
-        prompt: "consent",
-        scope: [
-          "https://www.googleapis.com/auth/drive.readonly",
-          "https://www.googleapis.com/auth/drive.file",
-        ],
-        state,
-      });
-
-      res.cookie(STATE_COOKIE, state, cookieOptions(req));
-      res.redirect(302, url);
-    } catch {
-      console.error("[Google Drive] Failed to start OAuth.");
-      res.status(500).json({
-        error: "Unable to start Google authorization.",
-      });
-    }
-  });
-
-  app.get("/api/google/callback", async (req: Request, res: Response) => {
-    if (!(await requireAdmin(req, res))) return;
-
-    const code = typeof req.query.code === "string"
-      ? req.query.code
-      : "";
-
-    const state = typeof req.query.state === "string"
-      ? req.query.state
-      : "";
-
-    const cookies = Object.fromEntries(
-      (req.headers.cookie ?? "")
-        .split(";")
-        .map((part) => {
-          const index = part.indexOf("=");
-
-          if (index < 0) return ["", ""];
-
-          return [
-            part.slice(0, index).trim(),
-            decodeURIComponent(part.slice(index + 1).trim()),
-          ];
-        })
-        .filter(([key]) => key)
-    );
-
-    const expectedState = cookies[STATE_COOKIE];
-
-    res.clearCookie(STATE_COOKIE, {
-      ...cookieOptions(req),
-      maxAge: undefined,
-    });
-
-    if (
-      !code ||
-      !state ||
-      !expectedState ||
-      !safeEqual(state, expectedState)
-    ) {
-      res.status(403).json({
-        error: "Invalid or expired Google OAuth state.",
-      });
-      return;
-    }
-
-    try {
-      const refreshToken = await exchangeGoogleDriveCode(code);
-      const encryptedToken = encryptToken(refreshToken);
-
-      const { error } = await getSupabase()
-        .from("google_drive_connections")
-        .upsert(
-          {
-            provider: "google_drive",
-            refresh_token_encrypted: encryptedToken,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "provider" }
+        const oauth = new google.auth.OAuth2(
+          clientId,
+          clientSecret,
+          redirectUri
         );
 
-      if (error) {
-        console.error("[Google Drive] Failed to save connection.");
+        const url = oauth.generateAuthUrl({
+          access_type: "offline",
+          prompt: "consent",
+          scope: [
+            "https://www.googleapis.com/auth/drive.readonly",
+            "https://www.googleapis.com/auth/drive.file",
+          ],
+          state,
+        });
+
+        res.cookie(
+          STATE_COOKIE,
+          state,
+          cookieOptions(req)
+        );
+
+        res.redirect(302, url);
+      } catch {
+        console.error(
+          "[Google Drive] Failed to start OAuth."
+        );
+
         res.status(500).json({
-          error: "Unable to securely save Google connection.",
+          error: "Unable to start Google authorization.",
+        });
+      }
+    }
+  );
+
+  app.get(
+    "/api/google/callback",
+    async (req: Request, res: Response) => {
+      if (!(await requireAdmin(req, res))) return;
+
+      const code =
+        typeof req.query.code === "string"
+          ? req.query.code
+          : "";
+
+      const state =
+        typeof req.query.state === "string"
+          ? req.query.state
+          : "";
+
+      const cookies = Object.fromEntries(
+        (req.headers.cookie ?? "")
+          .split(";")
+          .map((part) => {
+            const index = part.indexOf("=");
+
+            if (index < 0) return ["", ""];
+
+            return [
+              part.slice(0, index).trim(),
+              decodeURIComponent(
+                part.slice(index + 1).trim()
+              ),
+            ];
+          })
+          .filter(([key]) => key)
+      );
+
+      const expectedState = cookies[STATE_COOKIE];
+
+      res.clearCookie(STATE_COOKIE, {
+        ...cookieOptions(req),
+        maxAge: undefined,
+      });
+
+      if (
+        !code ||
+        !state ||
+        !expectedState ||
+        !safeEqual(state, expectedState)
+      ) {
+        res.status(403).json({
+          error: "Invalid or expired Google OAuth state.",
         });
         return;
       }
 
-      res.redirect(302, "/?googleDrive=connected");
-    } catch {
-      console.error("[Google Drive] OAuth callback failed.");
-      res.status(500).json({
-        error: "Google Drive authorization failed.",
-      });
-    }
-  });
+      try {
+        const refreshToken =
+          await exchangeGoogleDriveCode(code);
 
-  /**
-   * Step 1: Authenticate the teacher and create a Google Drive
-   * resumable-upload session. The video itself does not pass through Vercel.
-   */
+        const encryptedToken = encryptToken(refreshToken);
+
+        const { error } = await getSupabase()
+          .from("google_drive_connections")
+          .upsert(
+            {
+              provider: "google_drive",
+              refresh_token_encrypted: encryptedToken,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "provider" }
+          );
+
+        if (error) {
+          console.error(
+            "[Google Drive] Failed to save connection."
+          );
+
+          res.status(500).json({
+            error: "Unable to securely save Google connection.",
+          });
+          return;
+        }
+
+        res.redirect(302, "/?googleDrive=connected");
+      } catch {
+        console.error(
+          "[Google Drive] OAuth callback failed."
+        );
+
+        res.status(500).json({
+          error: "Google Drive authorization failed.",
+        });
+      }
+    }
+  );
+
   app.post(
     "/api/teacher-verification/teaching-video/session",
     json({ limit: "16kb" }),
@@ -312,7 +353,9 @@ export function registerGoogleDriveRoutes(app: Express) {
       const mimeType = req.body?.mimeType;
       const size = req.body?.size;
 
-      if (!["video/mp4", "video/webm"].includes(mimeType)) {
+      if (
+        !["video/mp4", "video/webm"].includes(mimeType)
+      ) {
         res.status(400).json({
           error: "صيغة الفيديو يجب أن تكون MP4 أو WebM.",
         });
@@ -343,7 +386,9 @@ export function registerGoogleDriveRoutes(app: Express) {
             .maybeSingle();
 
         if (existingError) {
-          throw new Error("Unable to check the existing video.");
+          throw new Error(
+            "Unable to check the existing video."
+          );
         }
 
         if (existing && existing.status !== "rejected") {
@@ -356,22 +401,28 @@ export function registerGoogleDriveRoutes(app: Express) {
 
         const refreshToken = await getGoogleRefreshToken();
 
-        const extension = mimeType === "video/webm" ? "webm" : "mp4";
+        const extension =
+          mimeType === "video/webm" ? "webm" : "mp4";
+
         const filename =
           `teacher-${teacherId}-teaching-video-${Date.now()}.${extension}`;
 
-        const uploadUrl = await createGoogleDriveUploadSession(
-          refreshToken,
-          filename,
-          mimeType,
-          size,
-          teacherId
-        );
+        const uploadUrl =
+          await createGoogleDriveUploadSession(
+            refreshToken,
+            filename,
+            mimeType,
+            size,
+            teacherId
+          );
 
         res.setHeader("Cache-Control", "no-store");
         res.status(200).json({ uploadUrl });
       } catch {
-        console.error("[Google Drive] Could not create upload session.");
+        console.error(
+          "[Google Drive] Could not create upload session."
+        );
+
         res.status(500).json({
           error:
             "تعذر بدء رفع الفيديو. تأكد من ربط Google Drive وحاول مرة أخرى.",
@@ -380,10 +431,6 @@ export function registerGoogleDriveRoutes(app: Express) {
     }
   );
 
-  /**
-   * Step 2: After the browser uploads directly to Google Drive,
-   * verify ownership and save the Google Drive file ID in Supabase.
-   */
   app.post(
     "/api/teacher-verification/teaching-video/complete",
     json({ limit: "16kb" }),
@@ -391,9 +438,10 @@ export function registerGoogleDriveRoutes(app: Express) {
       const user = await authenticateTeacher(req, res);
       if (!user) return;
 
-      const fileId = typeof req.body?.fileId === "string"
-        ? req.body.fileId
-        : "";
+      const fileId =
+        typeof req.body?.fileId === "string"
+          ? req.body.fileId
+          : "";
 
       if (!fileId || fileId.length > 200) {
         res.status(400).json({
@@ -402,10 +450,9 @@ export function registerGoogleDriveRoutes(app: Express) {
         return;
       }
 
-      let refreshToken = "";
-
       try {
-        refreshToken = await getGoogleRefreshToken();
+        const refreshToken =
+          await getGoogleRefreshToken();
 
         const file = await getGoogleDriveFileMetadata(
           refreshToken,
@@ -414,14 +461,19 @@ export function registerGoogleDriveRoutes(app: Express) {
 
         if (
           file.trashed ||
-          file.appProperties?.moallemTeacherId !== String(user.id) ||
-          file.appProperties?.moallemDocumentType !== "teaching_video" ||
-          !["video/mp4", "video/webm"].includes(file.mimeType ?? "") ||
+          file.appProperties?.moallemTeacherId !==
+            String(user.id) ||
+          file.appProperties?.moallemDocumentType !==
+            "teaching_video" ||
+          !["video/mp4", "video/webm"].includes(
+            file.mimeType ?? ""
+          ) ||
           Number(file.size) <= 0 ||
           Number(file.size) > MAX_VIDEO_SIZE
         ) {
           res.status(403).json({
-            error: "تعذر التحقق من ملكية الفيديو أو صيغته.",
+            error:
+              "تعذر التحقق من ملكية الفيديو أو صيغته.",
           });
           return;
         }
@@ -438,7 +490,9 @@ export function registerGoogleDriveRoutes(app: Express) {
             .maybeSingle();
 
         if (existingError) {
-          throw new Error("Unable to check the existing video.");
+          throw new Error(
+            "Unable to check the existing video."
+          );
         }
 
         if (existing && existing.status !== "rejected") {
@@ -469,7 +523,9 @@ export function registerGoogleDriveRoutes(app: Express) {
               .maybeSingle();
 
           if (updateError || !updated) {
-            throw new Error("Unable to save the replacement video.");
+            throw new Error(
+              "Unable to save the replacement video."
+            );
           }
         } else {
           const { error: insertError } = await supabase
@@ -481,21 +537,24 @@ export function registerGoogleDriveRoutes(app: Express) {
             });
 
           if (insertError) {
-            throw new Error("Unable to register the uploaded video.");
+            throw new Error(
+              "Unable to register the uploaded video."
+            );
           }
         }
-
-        // لا نحذف النسخة القديمة هنا؛ قد تكون محفوظة في Supabase
-        // وليس في Google Drive. يمكن تنظيفها بعد التحقق من مسارها.
 
         res.status(201).json({
           success: true,
           message: "تم رفع الفيديو وتسجيله للمراجعة.",
         });
       } catch {
-        console.error("[Google Drive] Could not register uploaded video.");
+        console.error(
+          "[Google Drive] Could not register uploaded video."
+        );
+
         res.status(500).json({
-          error: "تم رفع الفيديو، لكن تعذر تسجيله. حاول مرة أخرى.",
+          error:
+            "تم رفع الفيديو، لكن تعذر تسجيله. حاول مرة أخرى.",
         });
       }
     }
