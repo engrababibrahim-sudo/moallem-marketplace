@@ -44,7 +44,7 @@ const DOCUMENTS: {
   {
     type: "teaching_video",
     title: "فيديو شرح",
-    description: "ارفعي فيديو قصير يوضح أسلوبك في التدريس.",
+    description: "ارفعي فيديو قصير يوضح أسلوبك في التدريس. الحد الأقصى 100 ميجابايت.",
     accept: "video/mp4,video/webm",
     icon: Video,
   },
@@ -54,6 +54,7 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 export default function TeacherVerificationUploads() {
   const { user } = useAuth();
+
   const [documents, setDocuments] = useState<VerificationDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<DocumentType | null>(null);
@@ -89,21 +90,21 @@ export default function TeacherVerificationUploads() {
     void loadDocuments();
   }, [loadDocuments]);
 
-  const uploadDocument = async (
-    type: DocumentType,
-    file?: File,
-  ) => {
+  const uploadDocument = async (type: DocumentType, file?: File) => {
     if (!user || !file) return;
 
     setError("");
     setMessage("");
 
     if (file.size <= 0 || file.size > MAX_FILE_SIZE) {
-      setError("حجم الملف يجب أن يكون أكبر من صفر وألا يتجاوز 100 ميجابايت.");
+      setError(
+        "حجم الملف يجب أن يكون أكبر من صفر وألا يتجاوز 100 ميجابايت."
+      );
       return;
     }
 
     const isVideo = type === "teaching_video";
+
     const allowedTypes = isVideo
       ? ["video/mp4", "video/webm"]
       : ["application/pdf", "image/jpeg", "image/png"];
@@ -112,16 +113,18 @@ export default function TeacherVerificationUploads() {
       setError(
         isVideo
           ? "صيغة الفيديو غير مدعومة. استخدمي MP4 أو WebM."
-          : "صيغة الملف غير مدعومة. استخدمي PDF أو JPG أو PNG.",
+          : "صيغة الملف غير مدعومة. استخدمي PDF أو JPG أو PNG."
       );
       return;
     }
 
-    const existing = documents.find((doc) => doc.document_type === type);
+    const existing = documents.find(
+      (doc) => doc.document_type === type
+    );
 
     if (existing && existing.status !== "rejected") {
       setError(
-        "هذا المستند موجود بالفعل. لا يمكن استبداله إلا بعد رفضه من الإدارة.",
+        "هذا المستند موجود بالفعل. لا يمكن استبداله إلا بعد رفضه من الإدارة."
       );
       return;
     }
@@ -129,8 +132,94 @@ export default function TeacherVerificationUploads() {
     setUploading(type);
 
     try {
-      const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
-      const path = `${user.id}/${type}-${crypto.randomUUID()}.${extension}`;
+      if (isVideo) {
+        // 1. اطلب من الخادم إنشاء جلسة رفع آمنة إلى Google Drive.
+        const sessionResponse = await fetch(
+          "/api/teacher-verification/teaching-video/session",
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              mimeType: file.type,
+              size: file.size,
+            }),
+          }
+        );
+
+        const sessionData = await sessionResponse
+          .json()
+          .catch(() => ({}));
+
+        if (!sessionResponse.ok || !sessionData.uploadUrl) {
+          throw new Error(
+            sessionData.error || "تعذر بدء رفع الفيديو إلى Google Drive."
+          );
+        }
+
+        // 2. ارفع الفيديو مباشرة إلى Google Drive.
+        // لا يمر محتوى الفيديو عبر خادم Vercel.
+        const driveResponse = await fetch(sessionData.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type,
+          },
+          body: file,
+        });
+
+        if (!driveResponse.ok) {
+          throw new Error(
+            "تعذر رفع الفيديو إلى Google Drive. حاولي مرة أخرى."
+          );
+        }
+
+        const driveFile = await driveResponse.json().catch(() => null);
+
+        if (!driveFile?.id) {
+          throw new Error(
+            "اكتمل إرسال الفيديو لكن لم يُسترجع معرّف الملف من Google Drive."
+          );
+        }
+
+        // 3. تحقق من ملكية الملف وسجّله للمراجعة في قاعدة البيانات.
+        const completeResponse = await fetch(
+          "/api/teacher-verification/teaching-video/complete",
+          {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              fileId: driveFile.id,
+            }),
+          }
+        );
+
+        const completeData = await completeResponse
+          .json()
+          .catch(() => ({}));
+
+        if (!completeResponse.ok) {
+          throw new Error(
+            completeData.error ||
+              "تم رفع الفيديو لكن تعذر تسجيله للمراجعة."
+          );
+        }
+
+        setMessage("تم رفع فيديو الشرح إلى Google Drive وتسجيله للمراجعة.");
+        await loadDocuments();
+        return;
+      }
+
+      // رفع الشهادات والهوية إلى Supabase كما كان سابقًا.
+      const extension =
+        file.name.split(".").pop()?.toLowerCase() || "bin";
+
+      const path =
+        `${user.id}/${type}-${crypto.randomUUID()}.${extension}`;
 
       const { error: storageError } = await supabase.storage
         .from("teacher-verification")
@@ -158,9 +247,13 @@ export default function TeacherVerificationUploads() {
           .eq("status", "rejected");
 
         if (updateError) {
-          await supabase.storage.from("teacher-verification").remove([path]);
+          await supabase.storage
+            .from("teacher-verification")
+            .remove([path]);
+
           throw new Error(
-            "تم رفع الملف لكن تعذر تسجيل الاستبدال: " + updateError.message,
+            "تم رفع الملف لكن تعذر تسجيل الاستبدال: " +
+              updateError.message
           );
         }
 
@@ -169,7 +262,10 @@ export default function TeacherVerificationUploads() {
           .remove([existing.storage_path]);
 
         if (removeOldError) {
-          console.warn("Could not remove the old rejected file:", removeOldError);
+          console.warn(
+            "Could not remove the old rejected file:",
+            removeOldError
+          );
         }
       } else {
         const { error: insertError } = await supabase
@@ -182,10 +278,13 @@ export default function TeacherVerificationUploads() {
           });
 
         if (insertError) {
-          await supabase.storage.from("teacher-verification").remove([path]);
+          await supabase.storage
+            .from("teacher-verification")
+            .remove([path]);
+
           throw new Error(
             "تم رفع الملف لكن تعذر تسجيله في جدول المستندات: " +
-              insertError.message,
+              insertError.message
           );
         }
       }
@@ -196,7 +295,7 @@ export default function TeacherVerificationUploads() {
       setError(
         err instanceof Error
           ? err.message
-          : "حدث خطأ غير متوقع أثناء رفع المستند.",
+          : "حدث خطأ غير متوقع أثناء رفع المستند."
       );
     } finally {
       setUploading(null);
@@ -207,33 +306,46 @@ export default function TeacherVerificationUploads() {
 
   return (
     <section className="mt-6 rounded-[2rem] border border-black/5 bg-white p-6 shadow-sm sm:p-8">
-      <h2 className="text-xl font-extrabold">مستندات اعتماد المعلم</h2>
+      <h2 className="text-xl font-extrabold">
+        مستندات اعتماد المعلم
+      </h2>
+
       <p className="mt-2 text-sm leading-7 text-black/60">
         ارفعي المستندات الثلاثة المطلوبة. لن تكون الملفات متاحة للعامة،
         وستتمكن الإدارة المخوّلة من مراجعتها.
       </p>
 
       {error && (
-        <div role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">
+        <div
+          role="alert"
+          className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700"
+        >
           {error}
         </div>
       )}
 
       {message && (
-        <div role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">
+        <div
+          role="status"
+          className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700"
+        >
           {message}
         </div>
       )}
 
       {loading ? (
-        <p className="mt-5 text-sm text-black/60">جارٍ تحميل حالة المستندات...</p>
+        <p className="mt-5 text-sm text-black/60">
+          جارٍ تحميل حالة المستندات...
+        </p>
       ) : (
         <div className="mt-5 grid gap-4">
           {DOCUMENTS.map((item) => {
             const Icon = item.icon;
+
             const doc = documents.find(
-              (entry) => entry.document_type === item.type,
+              (entry) => entry.document_type === item.type
             );
+
             const busy = uploading === item.type;
 
             return (
@@ -248,6 +360,7 @@ export default function TeacherVerificationUploads() {
 
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold">{item.title}</h3>
+
                     <p className="mt-1 text-sm leading-6 text-black/60">
                       {item.description}
                     </p>
@@ -268,12 +381,10 @@ export default function TeacherVerificationUploads() {
                       </p>
                     )}
 
-                    {doc && doc.status !== "rejected" ? null : (
+                    {!doc || doc.status === "rejected" ? (
                       <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-full bg-[#182431] px-4 py-2.5 text-sm font-bold text-white">
                         {busy ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : doc ? (
-                          <Upload className="h-4 w-4" />
                         ) : (
                           <Upload className="h-4 w-4" />
                         )}
@@ -290,13 +401,18 @@ export default function TeacherVerificationUploads() {
                           className="hidden"
                           disabled={uploading !== null}
                           onChange={(event) => {
-                            const file = event.target.files?.[0];
+                            const selectedFile =
+                              event.target.files?.[0];
+
                             event.target.value = "";
-                            if (file) void uploadDocument(item.type, file);
+
+                            if (selectedFile) {
+                              void uploadDocument(item.type, selectedFile);
+                            }
                           }}
                         />
                       </label>
-                    )}
+                    ) : null}
                   </div>
 
                   {doc?.status === "approved" && (
