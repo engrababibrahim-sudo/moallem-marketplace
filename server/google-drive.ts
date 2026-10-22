@@ -72,6 +72,80 @@ function getDriveClient(refreshToken: string) {
   });
 }
 
+/**
+ * إنشاء جلسة رفع مباشر إلى Google Drive.
+ * الفيديو لا يمر عبر خادم Vercel.
+ */
+export async function createGoogleDriveUploadSession(
+  refreshToken: string,
+  filename: string,
+  mimeType: string,
+  size: number,
+  teacherId: string
+): Promise<string> {
+  if (
+    !refreshToken ||
+    !filename ||
+    !teacherId ||
+    !Number.isSafeInteger(size) ||
+    size <= 0 ||
+    size > 100 * 1024 * 1024 ||
+    !["video/mp4", "video/webm"].includes(mimeType)
+  ) {
+    throw new Error("Invalid Google Drive upload parameters.");
+  }
+
+  const oauth = getOAuthClient();
+  oauth.setCredentials({
+    refresh_token: refreshToken,
+  });
+
+  const { token } = await oauth.getAccessToken();
+
+  if (!token) {
+    throw new Error(
+      "Unable to obtain a Google access token."
+    );
+  }
+
+  const response = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Type": mimeType,
+        "X-Upload-Content-Length": String(size),
+      },
+      body: JSON.stringify({
+        name: filename,
+        mimeType,
+        appProperties: {
+          moallemTeacherId: teacherId,
+          moallemDocumentType: "teaching_video",
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Google Drive upload session failed: ${response.status}`
+    );
+  }
+
+  const uploadUrl = response.headers.get("Location");
+
+  if (!uploadUrl) {
+    throw new Error(
+      "Google Drive did not return an upload URL."
+    );
+  }
+
+  return uploadUrl;
+}
+
 export async function uploadGoogleDriveFile(
   refreshToken: string,
   filename: string,
@@ -97,7 +171,9 @@ export async function uploadGoogleDriveFile(
   });
 
   if (!response.data.id) {
-    throw new Error("Google Drive did not return a file ID.");
+    throw new Error(
+      "Google Drive did not return a file ID."
+    );
   }
 
   return response.data;
@@ -126,7 +202,8 @@ export async function listGoogleDriveFiles(
   const response = await drive.files.list({
     pageSize: 100,
     orderBy: "modifiedTime desc",
-    fields: "files(id,name,mimeType,modifiedTime,webViewLink)",
+    fields:
+      "files(id,name,mimeType,modifiedTime,webViewLink)",
     q: "trashed = false",
   });
 
@@ -145,7 +222,8 @@ export async function getGoogleDriveFileMetadata(
 
   const response = await drive.files.get({
     fileId,
-    fields: "id,name,mimeType,size,webViewLink",
+    fields:
+      "id,name,mimeType,size,webViewLink,appProperties,trashed",
     supportsAllDrives: true,
   });
 
