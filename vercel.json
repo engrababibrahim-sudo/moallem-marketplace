@@ -1,11 +1,11 @@
 <escape>{
   "buildCommand": "pnpm build:vercel",
   "outputDirectory": "dist",
-  "framework": "vite",
+  "framework": null,
   "installCommand": "pnpm install --no-frozen-lockfile",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
   ]
