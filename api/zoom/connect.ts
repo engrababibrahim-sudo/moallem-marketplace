@@ -1,43 +1,104 @@
-import { createClient } from "@supabase/supabase-js";
-import { randomBytes } from "node:crypto";
-import { env, redirectUri, signState } from "./_oauth.js";
 
-function json(res: any, status: number, body: unknown) { return res.status(status).json(body); }
-export default async function handler(req: any, res: any) {
-  if (req.method !== "GET") { res.setHeader("Allow", "GET"); return json(res, 405, { error: "Method not allowed" }); }
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { createClient } from "@supabase/supabase-js";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+
+function getEnv(...names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) return value;
+  }
+  throw new Error(`Missing environment variable: ${names[0]}`);
+}
+
+function signState(payload: string, secret: string): string {
+  return createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex");
+}
+
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
   try {
-    const authorization = String(req.headers?.authorization || "");
-    if (!authorization.startsWith("Bearer ")) return json(res, 401, { error: "يجب تسجيل الدخول أولًا." });
-    const url = env("SUPABASE_URL");
-    const anon = process.env.SUPABASE_PUBLISHABLE_KEY || env("VITE_SUPABASE_PUBLISHABLE_KEY");
-    const client = createClient(url, anon, { auth: { persistSession: false }, global: { headers: { Authorization: authorization } } });
-    const { data, error } = await client.auth.getUser();
-    if (error || !data.user) return json(res, 401, { error: "جلسة الدخول غير صالحة." });
-    const { data: profile } = await client.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
-    if (profile?.role !== "teacher") return json(res, 403, { error: "ربط Zoom متاح لحسابات المعلمين فقط." });
-    const payload = Buffer.from(JSON.stringify({ uid: data.user.id, exp: Date.now() + 10 * 60 * 1000, nonce: randomBytes(18).toString("base64url") })).toString("base64url");
-    const state = payload + "." + signState(payload);
-    const query = new URLSearchParams({
-      response_type: "code",
-      client_id: env("ZOOM_OAUTH_CLIENT_ID"),
-      redirect_uri: redirectUri(),
-      state,
-      include_granted_scopes: "true",
-      scope: "user:read:user",
+    const authorization = req.headers.authorization;
+
+    if (!authorization?.startsWith("Bearer ")) {
+      return res.status(401).json({
+        error: "يجب تسجيل الدخول إلى منصة مُعلّم أولًا",
+      });
+    }
+
+    const supabaseUrl = getEnv(
+      "SUPABASE_URL",
+      "VITE_SUPABASE_URL"
+    );
+
+    const supabaseKey = getEnv(
+      "SUPABASE_PUBLISHABLE_KEY",
+      "VITE_SUPABASE_PUBLISHABLE_KEY",
+      "SUPABASE_ANON_KEY",
+      "VITE_SUPABASE_ANON_KEY"
+    );
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: { Authorization: authorization },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
     });
-    return json(res, 200, { url: "https://zoom.us/oauth/authorize?" + query.toString() });
-  } catch (e) {
-    const missing = [
-      ["SUPABASE_URL", Boolean(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)],
-      ["SUPABASE_PUBLISHABLE_KEY or VITE_SUPABASE_PUBLISHABLE_KEY", Boolean(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY)],
-      ["ZOOM_OAUTH_CLIENT_ID", Boolean(process.env.ZOOM_OAUTH_CLIENT_ID)],
-      ["ZOOM_TOKEN_ENCRYPTION_KEY", Boolean(process.env.ZOOM_TOKEN_ENCRYPTION_KEY)],
-    ].filter(([, present]) => !present).map(([name]) => name);
-    const diagnostic = e instanceof Error ? e.message : String(e);
-    console.error("Zoom connect initialization failed", { missing, diagnostic });
-    const errorMessage = missing.length
-      ? "إعدادات Zoom: متغيرات غير مقروءة من الخادم: " + missing.join(", ")
-      : "إعدادات Zoom موجودة، لكن فشل التحقق من المفتاح أو الإعدادات. راجعي سجل Vercel للخطأ Zoom connect initialization failed.";
-    return json(res, 503, { error: errorMessage, missing });
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return res.status(401).json({
+        error: "انتهت جلسة الدخول، سجّلي الدخول مرة أخرى",
+      });
+    }
+
+    const clientId = getEnv("ZOOM_OAUTH_CLIENT_ID");
+    const redirectUri = getEnv("ZOOM_OAUTH_REDIRECT_URI");
+    const stateSecret = getEnv("ZOOM_OAUTH_STATE_SECRET");
+
+    const payload = Buffer.from(
+      JSON.stringify({
+        uid: user.id,
+        exp: Date.now() + 10 * 60 * 1000,
+        nonce: randomBytes(16).toString("hex"),
+      })
+    ).toString("base64url");
+
+    const signature = signState(payload, stateSecret);
+    const state = `${payload}.${signature}`;
+
+    const authorizationUrl = new URL(
+      "https://zoom.us/oauth/authorize"
+    );
+
+    authorizationUrl.searchParams.set("response_type", "code");
+    authorizationUrl.searchParams.set("client_id", clientId);
+    authorizationUrl.searchParams.set("redirect_uri", redirectUri);
+    authorizationUrl.searchParams.set("state", state);
+
+    return res.status(200).json({
+      authorizationUrl: authorizationUrl.toString(),
+    });
+  } catch (error) {
+    console.error("Zoom connect error:", error);
+
+    return res.status(500).json({
+      error: "تعذر بدء ربط Zoom. راجعي إعدادات البيئة في Vercel.",
+    });
   }
 }
