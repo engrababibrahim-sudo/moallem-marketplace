@@ -1,7 +1,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 function getEnv(...names: string[]): string {
   for (const name of names) {
@@ -21,8 +21,11 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "GET" && req.method !== "POST") {
+    res.setHeader("Allow", "GET, POST");
+    return res.status(405).json({
+      error: "Method not allowed",
+    });
   }
 
   try {
@@ -34,27 +37,24 @@ export default async function handler(
       });
     }
 
-    const supabaseUrl = getEnv(
-      "SUPABASE_URL",
-      "VITE_SUPABASE_URL"
+    const supabase = createClient(
+      getEnv("SUPABASE_URL", "VITE_SUPABASE_URL"),
+      getEnv(
+        "SUPABASE_PUBLISHABLE_KEY",
+        "VITE_SUPABASE_PUBLISHABLE_KEY",
+        "SUPABASE_ANON_KEY",
+        "VITE_SUPABASE_ANON_KEY"
+      ),
+      {
+        global: {
+          headers: { Authorization: authorization },
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
     );
-
-    const supabaseKey = getEnv(
-      "SUPABASE_PUBLISHABLE_KEY",
-      "VITE_SUPABASE_PUBLISHABLE_KEY",
-      "SUPABASE_ANON_KEY",
-      "VITE_SUPABASE_ANON_KEY"
-    );
-
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: { Authorization: authorization },
-      },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
 
     const {
       data: { user },
@@ -79,8 +79,7 @@ export default async function handler(
       })
     ).toString("base64url");
 
-    const signature = signState(payload, stateSecret);
-    const state = `${payload}.${signature}`;
+    const state = `${payload}.${signState(payload, stateSecret)}`;
 
     const authorizationUrl = new URL(
       "https://zoom.us/oauth/authorize"
@@ -98,7 +97,7 @@ export default async function handler(
     console.error("Zoom connect error:", error);
 
     return res.status(500).json({
-      error: "تعذر بدء ربط Zoom. راجعي إعدادات البيئة في Vercel.",
+      error: "تعذر بدء ربط Zoom. راجعي إعدادات Vercel.",
     });
   }
 }
