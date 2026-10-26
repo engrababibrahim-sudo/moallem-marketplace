@@ -2,8 +2,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { encrypt } from "./_oauth.js";
-
+import { encrypt } from "./_oauth";
 function getEnv(...names: string[]): string {
   for (const name of names) {
     const value = process.env[name];
