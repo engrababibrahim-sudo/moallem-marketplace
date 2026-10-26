@@ -23,6 +23,7 @@ export default async function handler(req: any, res: any) {
     }
 
     const url = env("SUPABASE_URL");
+
     const anon =
       process.env.SUPABASE_PUBLISHABLE_KEY ||
       env("VITE_SUPABASE_PUBLISHABLE_KEY");
@@ -30,7 +31,6 @@ export default async function handler(req: any, res: any) {
     const client = createClient(url, anon, {
       auth: {
         persistSession: false,
-        autoRefreshToken: false,
       },
       global: {
         headers: {
@@ -39,14 +39,11 @@ export default async function handler(req: any, res: any) {
       },
     });
 
-    const {
-      data,
-      error,
-    } = await client.auth.getUser();
+    const { data, error } = await client.auth.getUser();
 
     if (error || !data.user) {
       return json(res, 401, {
-        error: "جلسة الدخول غير صالحة. سجّلي الدخول مرة أخرى.",
+        error: "جلسة الدخول غير صالحة.",
       });
     }
 
@@ -57,10 +54,10 @@ export default async function handler(req: any, res: any) {
       .maybeSingle();
 
     if (profileError) {
-      console.error("Zoom profile lookup failed:", profileError.message);
+      console.error("Failed to read teacher profile:", profileError);
 
       return json(res, 500, {
-        error: "تعذر التحقق من حساب المعلم.",
+        error: "تعذر التحقق من صلاحيات حساب المعلم.",
       });
     }
 
@@ -75,7 +72,7 @@ export default async function handler(req: any, res: any) {
         uid: data.user.id,
         exp: Date.now() + 10 * 60 * 1000,
         nonce: randomBytes(18).toString("base64url"),
-      })
+      }),
     ).toString("base64url");
 
     const state = payload + "." + signState(payload);
@@ -85,8 +82,6 @@ export default async function handler(req: any, res: any) {
       client_id: env("ZOOM_OAUTH_CLIENT_ID"),
       redirect_uri: redirectUri(),
       state,
-      include_granted_scopes: "true",
-      scope: "user:read:user",
     });
 
     const authorizationUrl =
@@ -102,14 +97,14 @@ export default async function handler(req: any, res: any) {
         "SUPABASE_URL",
         Boolean(
           process.env.SUPABASE_URL ||
-          process.env.VITE_SUPABASE_URL
+            process.env.VITE_SUPABASE_URL,
         ),
       ],
       [
         "SUPABASE_PUBLISHABLE_KEY or VITE_SUPABASE_PUBLISHABLE_KEY",
         Boolean(
           process.env.SUPABASE_PUBLISHABLE_KEY ||
-          process.env.VITE_SUPABASE_PUBLISHABLE_KEY
+            process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         ),
       ],
       [
@@ -135,7 +130,7 @@ export default async function handler(req: any, res: any) {
     const errorMessage = missing.length
       ? "إعدادات Zoom: متغيرات غير مقروءة من الخادم: " +
         missing.join(", ")
-      : "إعدادات Zoom موجودة، لكن فشل التحقق من المفتاح أو الإعدادات. راجعي سجل Vercel للخطأ Zoom connect initialization failed.";
+      : "إعدادات الربط موجودة، لكن فشل التحقق من الإعدادات. راجعي سجل Vercel للخطأ Zoom connect initialization failed.";
 
     return json(res, 503, {
       error: errorMessage,
