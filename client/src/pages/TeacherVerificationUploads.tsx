@@ -44,7 +44,8 @@ const DOCUMENTS: {
   {
     type: "teaching_video",
     title: "فيديو شرح",
-    description: "ارفعي فيديو قصير يوضح أسلوبك في التدريس. الحد الأقصى 100 ميجابايت.",
+    description:
+      "ارفعي فيديو قصير يوضح أسلوبك في التدريس. الحد الأقصى 100 ميجابايت.",
     accept: "video/mp4,video/webm",
     icon: Video,
   },
@@ -131,96 +132,17 @@ export default function TeacherVerificationUploads() {
 
     setUploading(type);
 
+    let uploadedPath: string | null = null;
+
     try {
-      if (isVideo) {
-        // 1. اطلب من الخادم إنشاء جلسة رفع آمنة إلى Google Drive.
-        const sessionResponse = await fetch(
-          "/api/teacher-verification/teaching-video/session",
-          {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              mimeType: file.type,
-              size: file.size,
-            }),
-          }
-        );
-
-        const sessionData = await sessionResponse
-          .json()
-          .catch(() => ({}));
-
-        if (!sessionResponse.ok || !sessionData.uploadUrl) {
-          throw new Error(
-            sessionData.error || "تعذر بدء رفع الفيديو إلى Google Drive."
-          );
-        }
-
-        // 2. ارفع الفيديو مباشرة إلى Google Drive.
-        // لا يمر محتوى الفيديو عبر خادم Vercel.
-        const driveResponse = await fetch(sessionData.uploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": file.type,
-          },
-          body: file,
-        });
-
-        if (!driveResponse.ok) {
-          throw new Error(
-            "تعذر رفع الفيديو إلى Google Drive. حاولي مرة أخرى."
-          );
-        }
-
-        const driveFile = await driveResponse.json().catch(() => null);
-
-        if (!driveFile?.id) {
-          throw new Error(
-            "اكتمل إرسال الفيديو لكن لم يُسترجع معرّف الملف من Google Drive."
-          );
-        }
-
-        // 3. تحقق من ملكية الملف وسجّله للمراجعة في قاعدة البيانات.
-        const completeResponse = await fetch(
-          "/api/teacher-verification/teaching-video/complete",
-          {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              fileId: driveFile.id,
-            }),
-          }
-        );
-
-        const completeData = await completeResponse
-          .json()
-          .catch(() => ({}));
-
-        if (!completeResponse.ok) {
-          throw new Error(
-            completeData.error ||
-              "تم رفع الفيديو لكن تعذر تسجيله للمراجعة."
-          );
-        }
-
-        setMessage("تم رفع فيديو الشرح إلى Google Drive وتسجيله للمراجعة.");
-        await loadDocuments();
-        return;
-      }
-
-      // رفع الشهادات والهوية إلى Supabase كما كان سابقًا.
       const extension =
         file.name.split(".").pop()?.toLowerCase() || "bin";
 
       const path =
         `${user.id}/${type}-${crypto.randomUUID()}.${extension}`;
 
+      // رفع الشهادات والهوية وفيديو التقديم إلى Supabase Storage.
+      // Google Drive مخصص لتسجيلات الحصص بعد انتهائها.
       const { error: storageError } = await supabase.storage
         .from("teacher-verification")
         .upload(path, file, {
@@ -229,11 +151,15 @@ export default function TeacherVerificationUploads() {
         });
 
       if (storageError) {
-        throw new Error("تعذر رفع الملف: " + storageError.message);
+        throw new Error(
+          "تعذر رفع الملف إلى Supabase: " + storageError.message
+        );
       }
 
+      uploadedPath = path;
+
       if (existing) {
-        const { error: updateError } = await supabase
+        const { data: updated, error: updateError } = await supabase
           .from("teacher_verification_documents")
           .update({
             storage_path: path,
@@ -244,16 +170,20 @@ export default function TeacherVerificationUploads() {
           })
           .eq("id", existing.id)
           .eq("teacher_id", user.id)
-          .eq("status", "rejected");
+          .eq("status", "rejected")
+          .select("id")
+          .maybeSingle();
 
         if (updateError) {
-          await supabase.storage
-            .from("teacher-verification")
-            .remove([path]);
-
           throw new Error(
             "تم رفع الملف لكن تعذر تسجيل الاستبدال: " +
               updateError.message
+          );
+        }
+
+        if (!updated) {
+          throw new Error(
+            "لم يتم استبدال المستند. ربما تغيرت حالته. حدّثي الصفحة وحاولي مجددًا."
           );
         }
 
@@ -263,7 +193,7 @@ export default function TeacherVerificationUploads() {
 
         if (removeOldError) {
           console.warn(
-            "Could not remove the old rejected file:",
+            "تعذر حذف النسخة القديمة:",
             removeOldError
           );
         }
@@ -278,10 +208,6 @@ export default function TeacherVerificationUploads() {
           });
 
         if (insertError) {
-          await supabase.storage
-            .from("teacher-verification")
-            .remove([path]);
-
           throw new Error(
             "تم رفع الملف لكن تعذر تسجيله في جدول المستندات: " +
               insertError.message
@@ -289,9 +215,31 @@ export default function TeacherVerificationUploads() {
         }
       }
 
-      setMessage("تم رفع المستند وتسجيله بنجاح.");
+      // الملف أصبح مسجلاً في قاعدة البيانات، فلا نحذفه عند الخروج.
+      uploadedPath = null;
+
+      setMessage(
+        isVideo
+          ? "تم رفع فيديو الشرح إلى Supabase وتسجيله للمراجعة."
+          : "تم رفع المستند وتسجيله بنجاح."
+      );
+
       await loadDocuments();
     } catch (err) {
+      // تنظيف الملف الجديد إذا فشلت عملية تسجيله.
+      if (uploadedPath) {
+        const { error: cleanupError } = await supabase.storage
+          .from("teacher-verification")
+          .remove([uploadedPath]);
+
+        if (cleanupError) {
+          console.warn(
+            "تعذر حذف الملف بعد فشل التسجيل:",
+            cleanupError
+          );
+        }
+      }
+
       setError(
         err instanceof Error
           ? err.message
@@ -375,11 +323,12 @@ export default function TeacherVerificationUploads() {
                             : "قيد المراجعة"}
                     </p>
 
-                    {doc?.status === "rejected" && doc.review_note && (
-                      <p className="mt-2 text-sm text-red-700">
-                        ملاحظة الإدارة: {doc.review_note}
-                      </p>
-                    )}
+                    {doc?.status === "rejected" &&
+                      doc.review_note && (
+                        <p className="mt-2 text-sm text-red-700">
+                          ملاحظة الإدارة: {doc.review_note}
+                        </p>
+                      )}
 
                     {!doc || doc.status === "rejected" ? (
                       <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-full bg-[#182431] px-4 py-2.5 text-sm font-bold text-white">
@@ -407,7 +356,10 @@ export default function TeacherVerificationUploads() {
                             event.target.value = "";
 
                             if (selectedFile) {
-                              void uploadDocument(item.type, selectedFile);
+                              void uploadDocument(
+                                item.type,
+                                selectedFile
+                              );
                             }
                           }}
                         />
