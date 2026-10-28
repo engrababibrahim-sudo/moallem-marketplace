@@ -263,9 +263,9 @@ function Health({label,text}:{label:string;text:string}){
  return <div className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fbff] px-3 py-3"><span className="text-xs font-bold text-[#52657d]">{label}</span><span className="flex items-center gap-1.5 text-[10px] font-bold text-[#18a86b]"><i className="h-1.5 w-1.5 rounded-full bg-[#18a86b]"/>{text}</span></div>;
 }
 
-function Quick({href,icon:Icon,label}:{href:string;icon:any;label:string}){
+function Quick({href,icon:Icon,label}:{href:string;icon:any;label:string})
  return <Link href={href} className="flex items-center justify-between rounded-xl border border-[#e5edf6] px-3 py-3 text-xs font-bold text-[#52657d] transition hover:border-[#b9d5ff] hover:bg-[#f8fbff] hover:text-[#3974ff]"><span className="flex items-center gap-2"><Icon className="h-4 w-4"/>{label}</span><ChevronLeft className="h-4 w-4"/></Link>;
-}
+
 
 function AdminSection({title,location}:{title:string;location:string}){
  return <section className="rounded-[26px] border border-[#dfe8f2] bg-white p-8 shadow-sm">
