@@ -258,7 +258,6 @@ function Quick({href,icon:Icon,label}:{href:string;icon:any;label:string}){
    <div className="text-center"><strong className="block text-xl font-black text-[#142a57]">{data.reduce((sum,x)=>sum+x.value,0)}</strong><span className="text-[9px] font-bold text-[#8da0b9]">مستخدم</span></div>
   </div>
  </div>;
-}
 
 function Health({label,text}:{label:string;text:string}){
  return <div className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fbff] px-3 py-3"><span className="text-xs font-bold text-[#52657d]">{label}</span><span className="flex items-center gap-1.5 text-[10px] font-bold text-[#18a86b]"><i className="h-1.5 w-1.5 rounded-full bg-[#18a86b]"/>{text}</span></div>;
