@@ -9,7 +9,6 @@ import { useAuth } from "@/context/AuthContext";
 import Finance from "./Finance";
 import AdminZoomAttendance from "./AdminZoomAttendance";
 import ParentRequestsAdmin from "./ParentRequestsAdmin";
-import AdminTeacherVerification from "./AdminTeacherVerification";
 import { supabase } from "@/lib/supabase";
 
 const menu = [
@@ -17,7 +16,7 @@ const menu = [
   ["المستخدمون","/admin/users",Users],
   ["الطلاب","/admin/students",GraduationCap],
   ["أولياء الأمور","/admin/parents",UserRound],
-  ["اعتماد المدرسين","/admin/teachers",UserCheck],
+  ["طلبات المعلمين","/admin/teachers",ClipboardCheck],
   ["الحجوزات","/admin/bookings",CalendarDays],
   ["حضور لقاءات Zoom","/admin/attendance",Video],
   ["المالية والعمولة","/admin/finance",CircleDollarSign],
@@ -95,7 +94,7 @@ export default function Admin(){
       </header>
 
       <main className="mx-auto max-w-[1540px] p-5 lg:p-8">
-        {location==="/admin"?<Dashboard/>:location==="/admin/users"?<UsersAdmin/>:location==="/admin/teachers"?<AdminTeacherVerification/>:location==="/admin/students"?<Students/>:location==="/admin/parents"?<ParentsAdmin/>:location==="/admin/parent-requests"?<ParentRequestsAdmin/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:location==="/admin/bookings"?<AdminBookings/>:<AdminSection title={title} location={location}/>}
+        {location==="/admin"?<Dashboard/>:location==="/admin/users"?<UsersAdmin/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/parents"?<ParentsAdmin/>:location==="/admin/parent-requests"?<ParentRequestsAdmin/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:location==="/admin/bookings"?<AdminBookings/>:<AdminSection title={title} location={location}/>}
       </main>
     </div>
   </div>;
