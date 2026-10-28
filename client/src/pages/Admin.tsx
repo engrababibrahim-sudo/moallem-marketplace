@@ -1,3 +1,4 @@
+import AdminTeacherVerification from "./AdminTeacherVerification";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -93,12 +94,29 @@ export default function Admin(){
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1540px] p-5 lg:p-8">
-        {location==="/admin"?<Dashboard/>:location==="/admin/users"?<UsersAdmin/>:location==="/admin/teachers"?<TeacherRequests/>:location==="/admin/students"?<Students/>:location==="/admin/parents"?<ParentsAdmin/>:location==="/admin/parent-requests"?<ParentRequestsAdmin/>:location==="/admin/finance"?<Finance/>:location==="/admin/attendance"?<AdminZoomAttendance/>:location==="/admin/bookings"?<AdminBookings/>:<AdminSection title={title} location={location}/>}
-      </main>
-    </div>
-  </div>;
-}
+     <main className="mx-auto max-w-[1540px] p-5 lg:p-8">
+  {location === "/admin" ? (
+    <Dashboard />
+  ) : location === "/admin/users" ? (
+    <UsersAdmin />
+  ) : location === "/admin/teachers" ? (
+    <AdminTeacherVerification />
+  ) : location === "/admin/students" ? (
+    <Students />
+  ) : location === "/admin/parents" ? (
+    <ParentsAdmin />
+  ) : location === "/admin/parent-requests" ? (
+    <ParentRequestsAdmin />
+  ) : location === "/admin/finance" ? (
+    <Finance />
+  ) : location === "/admin/attendance" ? (
+    <AdminZoomAttendance />
+  ) : location === "/admin/bookings" ? (
+    <AdminBookings />
+  ) : (
+    <AdminSection title={title} location={location} />
+  )}
+</main>
 
 function PendingBadge(){
   const [n,setN]=useState(0);
