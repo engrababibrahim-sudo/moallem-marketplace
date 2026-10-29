@@ -1,3 +1,4 @@
+import AdminTeacherVerification from "./AdminTeacherVerification";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
