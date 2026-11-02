@@ -9,6 +9,7 @@ import { registerPaymobRoutes } from "./payments/paymob";
 import { registerLiveSessionRoutes } from "./liveSessions/providers";
 import { registerLiveSessionManagementRoutes } from "./liveSessions/routes";
 import { registerGoogleDriveRoutes } from "./google-drive-routes";
+import { registerZoomDeauthorizationRoute } from "./liveSessions/zoom-deauthorization";
 
 export function createApp() {
   const app = express();
