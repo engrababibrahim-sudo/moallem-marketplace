@@ -24,6 +24,7 @@ export function createApp() {
   registerPaymobRoutes(app);
   registerLiveSessionRoutes(app);
   registerLiveSessionManagementRoutes(app);
+  registerZoomDeauthorizationRoute(app);
   registerGoogleDriveRoutes(app);
 
   app.use(
